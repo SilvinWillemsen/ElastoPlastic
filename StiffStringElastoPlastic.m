@@ -4,14 +4,14 @@ clc;
 
 Fs = 44100;     % Sampling rate
 f0 = 196.00;    % G3
-c = f0*2;     % Wave-Speed
+c = f0 * 2;     % Wave-Speed
 gamma = f0*2;     % Wave-Speed
 L = 1;
 k = 1/Fs;       % Time-step
 s0 = 0.1;       % Damping coefficients
 s1 = 0.005;
 
-E = 2e11;
+E = 2e12;
 r = 0.0005; 
 A = r^2*pi;
 I = pi*r^4 / 4;
@@ -21,9 +21,9 @@ kappa = sqrt(E*I/(rho*A));
 % kappa = sqrt(B)*(gamma/pi); % Stiffness Factor     
 % 
 % % Calculate grid spacing
-h = sqrt((gamma^2*k^2 + 4 * s1 * k + sqrt((gamma^2 * k^2 + 4 * s1 * k)^2 + 16 * kappa^2 * k^2)) / 2);
-N = floor(1/h); % Number of gridpoints
-h = 1/N; % Recalculate gridspacing
+% h = sqrt((gamma^2*k^2 + 4 * s1 * k + sqrt((gamma^2 * k^2 + 4 * s1 * k)^2 + 16 * kappa^2 * k^2)) / 2);
+% N = floor(1/h); % Number of gridpoints
+% h = 1/N; % Recalculate gridspacing
 % 
 % % Courant numbers
 % lambdaSq = (gamma*k/h)^2; 
@@ -176,7 +176,7 @@ for t = 1 : lengthSound
                 
                 d_fnlv = 1-z * ((alpha +Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
                 d_fnlz = -Vrel/zss*(z*dalpha_z +alpha);
-                d_fnl = d_fnlv * -0.2295 + d_fnlz * k;
+                d_fnl = d_fnlv * -0.2295 + d_fnlz * k / 2;
                 
                 zdotNext = zdot - (fnl - zdot)/(d_fnl - 1);
                 eps = abs(zdotNext-zdot);
@@ -202,7 +202,7 @@ for t = 1 : lengthSound
     zPrev = z;
     zDotPrev = zdot;
     % Plot
-    if drawString == false && mod(t,100) == 0 %&& t > Fs * 2
+    if drawString == false && mod(t,1) == 0 %&& t > Fs * 2
         clf;
         plot(uNext);
 %         ylim([-1e-6 1e-6])

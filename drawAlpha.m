@@ -49,7 +49,7 @@ end
 %     end
 % end
 
-figure('Renderer', 'painters', 'Position', [100 100 800 400])
+figure('Renderer', 'painters', 'Position', [100 100 600 420])
 hold on;
 ylim([-0.07 1.07])
 xlim([-1.5e-4 1.5e-4])
@@ -85,7 +85,7 @@ xticks([])
 %%DRAW VERTICAL GRIDLINES
 % scatter([-z_ba; z_ba; -zss(1); zss(1)], [0; 0; 1; 1], 50, 'circle')
 
-set(gca, 'Position', [0.065 0.09 0.92 0.84])
+set(gca, 'Position', [0.07 0.09 0.92 0.84])
 
 patch([min(xlim) max(xlim) max(xlim) min(xlim)], [max(ylim) max(ylim) min(ylim) min(ylim)], [0 0 0], 'FaceColor', 'none', 'EdgeColor', 'black', 'LineWidth', 2);
 % grid on;
