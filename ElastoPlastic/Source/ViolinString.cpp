@@ -12,19 +12,19 @@
 #include "ViolinString.h"
 
 //==============================================================================
-ViolinString::ViolinString (double freq, double fs, int stringID) : fs(fs), ogFreq(freq), stringID(stringID)
+ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowModel) : fs(fs), ogFreq(freq), stringID(stringID), bowModel(bowModel)
 {
     // In your constructor, you should add any child components, and
     // initialise any special settings that your component needs.
     uVecs.resize(3);
     
-    _bpX = 0.25;
+    _bpX = 0.5;
     _bpY = 0;
     
     c = ogFreq * 2; // Wave speed
     k = 1 / fs;       // Time-step
     
-    s0 = 1;     // Frequency-independent damping
+    s0 = 0.1;     // Frequency-independent damping
     s1 = 0.005; // Frequency-dependent damping
     
     //    B = 0.0001;                             // Inharmonicity coefficient
@@ -46,7 +46,6 @@ ViolinString::ViolinString (double freq, double fs, int stringID) : fs(fs), ogFr
     //    vector<double> dummyVector (N, 0);
     for (int i = 0; i < 3; ++i)
     {
-        std::cout << uVecs.size() << std::endl;
         uVecs[i].resize(N);
     }
     
@@ -87,7 +86,7 @@ ViolinString::ViolinString (double freq, double fs, int stringID) : fs(fs), ogFr
     z_ba = 0.7 * fC / sig0;         // break-away displacement (has to be < f_c/sigma_0!!)
     
     // Initialise variables for Newton Raphson
-    tol = 1e-4;
+    tol = 1e-7;
     qPrev = 0;
     zPrev = 0;
     zDotPrev = 0;
@@ -119,6 +118,7 @@ ViolinString::ViolinString (double freq, double fs, int stringID) : fs(fs), ogFr
     E2 = k * k * (1 / h);
     
     reset();
+    q = 0.1;
     std::cout << N << std::endl;
 }
 
@@ -128,7 +128,7 @@ void ViolinString::reset()
         for (int j = 0; j < N; ++j)
             uVecs[i][j] = 0.0;
     qPrev = 0;
-    q = 0;
+    q = 0.1;
 }
 
 ViolinString::~ViolinString()
@@ -214,7 +214,7 @@ void ViolinString::bow()
     }
     else if (bowModel == elastoPlastic)
     {
-        excitation = E2 * sig0 * z + sig1 * zDot + sig2 * q;
+        excitation = E2 * (sig0 * z + sig1 * zDot + sig2 * q);
     }
     
     for (int l = 2; l < N - 2; ++l)
@@ -283,7 +283,7 @@ void ViolinString::bow()
 
 void ViolinString::newtonRaphson()
 {
-    double Vb = 0.1;
+    double Vb = _Vb.load();
     double Fb = _Fb.load();
     int bp = floor(bowPos.load());
     double alpha = bowPos.load() - bp;
@@ -396,6 +396,7 @@ void ViolinString::newtonRaphson()
             if (i == 49)
                 std::cout << "i = " << i << std::endl;
         }
+//        std::cout << i << std::endl;
         zPrev = z;
         zDotPrev = zDot;
     }
@@ -431,7 +432,8 @@ Path ViolinString::generateStringPathAdvanced()
     
     for (int y = 0; y < N; y++)
     {
-        float newY = uNext[y] * 50000 + stringBounds;
+        int visualScaling = bowModel == elastoPlastic ? 25000000 : 50000;
+        float newY = uNext[y] * visualScaling + stringBounds;
         if (isnan(newY))
             newY = 0;
         stringPath.lineTo(x, newY);

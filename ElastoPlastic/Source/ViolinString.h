@@ -50,7 +50,7 @@ using namespace std;
 class ViolinString : public Component
 {
 public:
-    ViolinString(double freq, double fs, int stringID);
+    ViolinString(double freq, double fs, int stringID, BowModel bowModel);
     ~ViolinString();
     
     void paint(Graphics &) override;
@@ -110,6 +110,8 @@ public:
     
     int sgn (double val) { return (0 < val) - (val < 0); };
     
+    BowModel getModel() { return bowModel; };
+    
 private:
     double fs, freq, c, k, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
     
@@ -157,7 +159,7 @@ private:
     
     int stringID;
     
-    BowModel bowModel = elastoPlastic;
+    BowModel bowModel;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ViolinString)
 };

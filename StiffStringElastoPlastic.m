@@ -3,7 +3,7 @@ close all;
 clc;
 
 Fs = 44100;     % Sampling rate
-f0 = 196.00;    % G3
+f0 = 110.00;    % G3
 c = f0 * 2;     % Wave-Speed
 gamma = f0*2;     % Wave-Speed
 L = 1;
@@ -11,12 +11,13 @@ k = 1/Fs;       % Time-step
 s0 = 0.1;       % Damping coefficients
 s1 = 0.005;
 
-E = 2e12;
+E = 2e11;
 r = 0.0005; 
 A = r^2*pi;
 I = pi*r^4 / 4;
 rho = 7850;
-kappa = sqrt(E*I/(rho*A));
+% kappa = sqrt(E*I/(rho*A));
+kappa = 2;
 % B = 0.0001; %inharmonicity coefficient
 % kappa = sqrt(B)*(gamma/pi); % Stiffness Factor     
 % 
@@ -67,7 +68,7 @@ qPrev = 0;
 
 drawString = true;
             
-bp = 0.22; 
+bp = 0.5; 
 I = zeros(N,1);
 I(floor(bp * N)) = 1;
 J = 1/h * I;

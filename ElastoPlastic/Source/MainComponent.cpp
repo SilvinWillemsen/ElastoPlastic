@@ -14,7 +14,7 @@ MainComponent::MainComponent() : minOut(-1.0), maxOut(1.0)
     // Make sure you set the size of the component after
     // you add any child components.
     // specify the number of input and output channels that we want to open
-    setAudioChannels (2, 2);
+    setAudioChannels (0, 1);
 }
 
 MainComponent::~MainComponent()
@@ -36,11 +36,15 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     fs = sampleRate;
     bufferSize = samplesPerBlockExpected;
     
-    violinStrings.add (new ViolinString (110.0, fs, 0));
+    violinStrings.add (new ViolinString (176.0, fs, 0, elastoPlastic));
+    violinStrings.add (new ViolinString (196.0, fs, 0, exponential));
     setSize (appWidth, appHeight);
-    Timer::startTimerHz(15);
+    Timer::startTimerHz(60);
     
-    addAndMakeVisible (violinStrings[0]);
+    for (auto violinString : violinStrings)
+    {
+        addAndMakeVisible (violinString);
+    }
 }
 
 void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
@@ -52,17 +56,20 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
     // Right now we are not producing any data, in which case we need to clear the buffer
     // (to prevent the output of random noise)
     float *const channelData1 = bufferToFill.buffer->getWritePointer(0, bufferToFill.startSample);
-    float *const channelData2 = bufferToFill.buffer->getWritePointer(1, bufferToFill.startSample);
+//    float *const channelData2 = bufferToFill.buffer->getWritePointer(1, bufferToFill.startSample);
     
 //    float output{0.0, 0.0};
-    float output = 0;
     for (int i = 0; i < bufferSize; ++i)
     {
-        violinStrings[0]->bow();
-        output = violinStrings[0]->getOutput (0.3) * 800;
-        violinStrings[0]->updateUVectors();
+        float output = 0.0;
+        for (auto violinString : violinStrings)
+        {
+            violinString->bow();
+            output = output + violinString->getOutput(0.3) * (violinString->getModel() == exponential ? 800 : 3000);
+            violinString->updateUVectors();
+        }
         channelData1[i] = clip(output);
-        channelData2[i] = clip(output);
+//        channelData2[i] = clip(output);
     }
 }
 
@@ -88,7 +95,13 @@ void MainComponent::resized()
     // This is called when the MainContentComponent is resized.
     // If you add any child components, this is where you should
     // update their positions.
-    violinStrings[0]->setBounds (0, 0, appWidth, appHeight);
+    int i = 0;
+    int div = appHeight / violinStrings.size();
+    for (auto violinString : violinStrings)
+    {
+        violinString->setBounds (0, div * i, appWidth, div);
+        ++i;
+    }
 }
 
 void MainComponent::hiResTimerCallback()
