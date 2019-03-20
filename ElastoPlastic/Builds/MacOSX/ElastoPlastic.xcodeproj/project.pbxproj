@@ -69,6 +69,22 @@
 			isa = PBXBuildFile;
 			fileRef = 3DDABD9508C9605DB53E53B7;
 		};
+		427250003BCD70762F4B1857 = {
+			isa = PBXBuildFile;
+			fileRef = 2C29DDBDE87BDD44F7FC326F;
+		};
+		2C2C9A28B07FC2986B27FAB2 = {
+			isa = PBXBuildFile;
+			fileRef = AACEB31372E8154B4B246C77;
+		};
+		EB58FF171C0A151A6236D21A = {
+			isa = PBXBuildFile;
+			fileRef = C98B60F61745B0D5FD0BD2A1;
+		};
+		8117EA45BA11410C284029DF = {
+			isa = PBXBuildFile;
+			fileRef = F0F5840F5D532EAEF3A1092B;
+		};
 		31709BCE68FC393996DB4E14 = {
 			isa = PBXBuildFile;
 			fileRef = D6F96D61144E432D17BA6561;
@@ -80,6 +96,10 @@
 		1025E03EC6CD891F14A8E18C = {
 			isa = PBXBuildFile;
 			fileRef = D738B4AC2DFAA91EDE19074E;
+		};
+		E813016CEDD68BD8CB28A1C6 = {
+			isa = PBXBuildFile;
+			fileRef = DB3D79FCDD928F409CFF277C;
 		};
 		BACEA4825ABA42728068EDFE = {
 			isa = PBXBuildFile;
@@ -144,6 +164,13 @@
 			path = "/Users/SilvinW/repositories/newJUCE/JUCE/modules/juce_audio_basics";
 			sourceTree = "<absolute>";
 		};
+		01B1CF209724496B5589A58E = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = "sensel_device.h";
+			path = "../../SenselWrapper/lib/sensel_device.h";
+			sourceTree = "SOURCE_ROOT";
+		};
 		03AD8B1D9785C5DA20914879 = {
 			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
@@ -172,6 +199,13 @@
 			path = System/Library/Frameworks/CoreMIDI.framework;
 			sourceTree = SDKROOT;
 		};
+		2C29DDBDE87BDD44F7FC326F = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.c;
+			name = sensel.c;
+			path = ../../SenselWrapper/lib/sensel.c;
+			sourceTree = "SOURCE_ROOT";
+		};
 		2F483F27EA9803B53B6F4B97 = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.c.h;
@@ -192,6 +226,20 @@
 			includeInIndex = 0;
 			path = ElastoPlastic.app;
 			sourceTree = "BUILT_PRODUCTS_DIR";
+		};
+		35125002CAC44BD0A61EC0D8 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = "sensel_serial.h";
+			path = "../../SenselWrapper/lib/sensel_serial.h";
+			sourceTree = "SOURCE_ROOT";
+		};
+		36DA8D032874094AC0994C79 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = "sensel_register.h";
+			path = "../../SenselWrapper/lib/sensel_register.h";
+			sourceTree = "SOURCE_ROOT";
 		};
 		3B0939C96EC8D39A8AD58FA1 = {
 			isa = PBXFileReference;
@@ -242,6 +290,13 @@
 			path = "../../JuceLibraryCode/include_juce_audio_processors.mm";
 			sourceTree = "SOURCE_ROOT";
 		};
+		50520A1140AB50CD467E8434 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = SenselWrapper.h;
+			path = ../../SenselWrapper/SenselWrapper.h;
+			sourceTree = "SOURCE_ROOT";
+		};
 		53877B258C829093162A8CE3 = {
 			isa = PBXFileReference;
 			lastKnownFileType = file;
@@ -263,6 +318,20 @@
 			path = "../../JuceLibraryCode/include_juce_video.mm";
 			sourceTree = "SOURCE_ROOT";
 		};
+		725877AE719A0F05ADE8B625 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = "sensel_protocol.h";
+			path = "../../SenselWrapper/lib/sensel_protocol.h";
+			sourceTree = "SOURCE_ROOT";
+		};
+		72F0B6375A5A02063B5B337F = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = BinaryData.h;
+			path = ../../JuceLibraryCode/BinaryData.h;
+			sourceTree = "SOURCE_ROOT";
+		};
 		753552947340378044E08048 = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.cpp.objcpp;
@@ -277,12 +346,26 @@
 			path = ../../JuceLibraryCode/AppConfig.h;
 			sourceTree = "SOURCE_ROOT";
 		};
+		7C7BD8A87BCC6BF60FBD0D42 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = "sensel_types.h";
+			path = "../../SenselWrapper/lib/sensel_types.h";
+			sourceTree = "SOURCE_ROOT";
+		};
 		7EC1E729B8E79913D7EC6705 = {
 			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
 			name = CoreAudio.framework;
 			path = System/Library/Frameworks/CoreAudio.framework;
 			sourceTree = SDKROOT;
+		};
+		810DFFC5D7377FB989A176C4 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file.md;
+			name = README.md;
+			path = ../../SenselWrapper/README.md;
+			sourceTree = "SOURCE_ROOT";
 		};
 		8314490B7266EF9F006DCCEB = {
 			isa = PBXFileReference;
@@ -303,6 +386,13 @@
 			lastKnownFileType = text.plist.xml;
 			name = "Info-App.plist";
 			path = "Info-App.plist";
+			sourceTree = "SOURCE_ROOT";
+		};
+		9A3905ACAA4ECA02745D3383 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = "sensel_register_map.h";
+			path = "../../SenselWrapper/lib/sensel_register_map.h";
 			sourceTree = "SOURCE_ROOT";
 		};
 		9C6DBF0F06F6A1D5BD52F7D1 = {
@@ -333,6 +423,13 @@
 			path = "/Users/SilvinW/repositories/newJUCE/JUCE/modules/juce_events";
 			sourceTree = "<absolute>";
 		};
+		AACEB31372E8154B4B246C77 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.c;
+			name = "sensel_register.c";
+			path = "../../SenselWrapper/lib/sensel_register.c";
+			sourceTree = "SOURCE_ROOT";
+		};
 		AB62BC76C65D7713C7A12BAA = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.cpp.objcpp;
@@ -361,6 +458,13 @@
 			path = System/Library/Frameworks/WebKit.framework;
 			sourceTree = SDKROOT;
 		};
+		C0A451BAC587FC0D1FF9BCE7 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = LICENSE;
+			path = ../../SenselWrapper/LICENSE;
+			sourceTree = "SOURCE_ROOT";
+		};
 		C0BB7948444521761A180414 = {
 			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
@@ -388,6 +492,13 @@
 			name = Cocoa.framework;
 			path = System/Library/Frameworks/Cocoa.framework;
 			sourceTree = SDKROOT;
+		};
+		C98B60F61745B0D5FD0BD2A1 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.c;
+			name = "sensel_serial_linux.c";
+			path = "../../SenselWrapper/lib/sensel_serial_linux.c";
+			sourceTree = "SOURCE_ROOT";
 		};
 		CB3A27598BC3C44036C02783 = {
 			isa = PBXFileReference;
@@ -445,6 +556,13 @@
 			path = "/Users/SilvinW/repositories/newJUCE/JUCE/modules/juce_video";
 			sourceTree = "<absolute>";
 		};
+		DB3D79FCDD928F409CFF277C = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			name = BinaryData.cpp;
+			path = ../../JuceLibraryCode/BinaryData.cpp;
+			sourceTree = "SOURCE_ROOT";
+		};
 		DBBC0FE1F2018A90E7EF07F7 = {
 			isa = PBXFileReference;
 			lastKnownFileType = file;
@@ -480,12 +598,26 @@
 			path = System/Library/Frameworks/AVFoundation.framework;
 			sourceTree = SDKROOT;
 		};
+		F0F5840F5D532EAEF3A1092B = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.c;
+			name = "sensel_serial_win.c";
+			path = "../../SenselWrapper/lib/sensel_serial_win.c";
+			sourceTree = "SOURCE_ROOT";
+		};
 		F36D120E2D0A20275F08F9CE = {
 			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
 			name = Accelerate.framework;
 			path = System/Library/Frameworks/Accelerate.framework;
 			sourceTree = SDKROOT;
+		};
+		F6C106D263AA8A622EDA9235 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = sensel.h;
+			path = ../../SenselWrapper/lib/sensel.h;
+			sourceTree = "SOURCE_ROOT";
 		};
 		FB36ED74CEFA04F4B22D3326 = {
 			isa = PBXFileReference;
@@ -494,12 +626,49 @@
 			path = "/Users/SilvinW/repositories/newJUCE/JUCE/modules/juce_data_structures";
 			sourceTree = "<absolute>";
 		};
+		FC950B62B3076A3F80495B41 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = "sensel_device_vidpid.h";
+			path = "../../SenselWrapper/lib/sensel_device_vidpid.h";
+			sourceTree = "SOURCE_ROOT";
+		};
 		FD56F8043A8B6271BC4ACB84 = {
 			isa = PBXFileReference;
 			lastKnownFileType = file;
 			name = "juce_core";
 			path = "/Users/SilvinW/repositories/newJUCE/JUCE/modules/juce_core";
 			sourceTree = "<absolute>";
+		};
+		B478FF0EADAD3C1F184990D7 = {
+			isa = PBXGroup;
+			children = (
+				2C29DDBDE87BDD44F7FC326F,
+				F6C106D263AA8A622EDA9235,
+				01B1CF209724496B5589A58E,
+				FC950B62B3076A3F80495B41,
+				725877AE719A0F05ADE8B625,
+				AACEB31372E8154B4B246C77,
+				36DA8D032874094AC0994C79,
+				9A3905ACAA4ECA02745D3383,
+				35125002CAC44BD0A61EC0D8,
+				C98B60F61745B0D5FD0BD2A1,
+				F0F5840F5D532EAEF3A1092B,
+				7C7BD8A87BCC6BF60FBD0D42,
+			);
+			name = lib;
+			sourceTree = "<group>";
+		};
+		373D41B28B88D377764CACA4 = {
+			isa = PBXGroup;
+			children = (
+				B478FF0EADAD3C1F184990D7,
+				C0A451BAC587FC0D1FF9BCE7,
+				810DFFC5D7377FB989A176C4,
+				50520A1140AB50CD467E8434,
+			);
+			name = SenselWrapper;
+			sourceTree = "<group>";
 		};
 		ED5B88C3E34393D774C23489 = {
 			isa = PBXGroup;
@@ -516,6 +685,7 @@
 		545895C491167C78BB54BB46 = {
 			isa = PBXGroup;
 			children = (
+				373D41B28B88D377764CACA4,
 				ED5B88C3E34393D774C23489,
 			);
 			name = ElastoPlastic;
@@ -546,6 +716,8 @@
 			isa = PBXGroup;
 			children = (
 				76360A88E0B6239B6D99DF52,
+				DB3D79FCDD928F409CFF277C,
+				72F0B6375A5A02063B5B337F,
 				EB8937665AE7A38C724B5270,
 				AB62BC76C65D7713C7A12BAA,
 				0D21A6CB5F3F8A8C4EDD21B3,
@@ -826,9 +998,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				427250003BCD70762F4B1857,
+				2C2C9A28B07FC2986B27FAB2,
+				EB58FF171C0A151A6236D21A,
+				8117EA45BA11410C284029DF,
 				31709BCE68FC393996DB4E14,
 				518DBEA96327BF1A8D09AC0C,
 				1025E03EC6CD891F14A8E18C,
+				E813016CEDD68BD8CB28A1C6,
 				BACEA4825ABA42728068EDFE,
 				A61399F53625C22874CFB2AB,
 				522A53F50B799F7248990FF2,

@@ -1,9 +1,9 @@
-clear all;
-close all;
+% clear all;
+% close all;
 clc;
 
 Fs = 44100;     % Sampling rate
-f0 = 110.00;    % G3
+f0 = 196.00;    % G3
 c = f0 * 2;     % Wave-Speed
 gamma = f0*2;     % Wave-Speed
 L = 1;
@@ -16,7 +16,7 @@ r = 0.0005;
 A = r^2*pi;
 I = pi*r^4 / 4;
 rho = 7850;
-% kappa = sqrt(E*I/(rho*A));
+kappa = sqrt(E*I/(rho*A));
 kappa = 2;
 % B = 0.0001; %inharmonicity coefficient
 % kappa = sqrt(B)*(gamma/pi); % Stiffness Factor     
@@ -57,7 +57,7 @@ a = 100;                % free parameter
 BM = sqrt(2*a)*exp(1/2);
 
 % User variables
-Vb = 0.2;               % Bowing speed
+Vb = -0.2;               % Bowing speed
 Fb = 50;                % Bowing force / total mass of bow
 pickup = floor(N/3);    % Pickup position
 
@@ -68,16 +68,16 @@ qPrev = 0;
 
 drawString = true;
             
-bp = 0.5; 
+bp = 0.45; 
 I = zeros(N,1);
 I(floor(bp * N)) = 1;
 J = 1/h * I;
 %%%% the Contact Force (be with you) %%%%%%%%%
-mus=0.4;               % static friction coeff
-mud=0.2;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
+mus=0.8;               % static friction coeff
+mud=0.3;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
 strv=1e-1;             % "stribeck" velocity
 
-Fn = 1;
+Fn = 10;
 
 fc=mud*Fn;             % coulomb force
 fs=mus*Fn;             % stiction force
@@ -86,6 +86,9 @@ ssparam=[fc,fs,strv];
 sig0=1e4;           % bristle stiffness
 sig1=.1*sqrt(sig0);   % bristle damping
 sig2=0.4;            % viscous friction term 
+% sig0=4000;           % bristle stiffness
+% sig1=0;   % bristle damping
+% sig2=0.25;            % viscous friction term 
 sigma=[sig0,sig1,sig2];
 
 z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
@@ -96,7 +99,7 @@ f_fr1=0;                % initial friction force
 f_tot_r1=0;         % initial total force on resonator
 f_tot_b1=0;         % initial total force on bow
 
-VbInit = 0.1;
+VbInit = -0.1;
 a_z=[1,1/(2*Fs)];
 zPrev = 0;
 z = 0;
@@ -115,8 +118,11 @@ bowModel = "elastoPlastic";
 Vrel = VbInit;
 VrelPrev = VbInit;
 excitation = 0;
+
+K1 = -sig1 / ((sig2 + 2/k + 2*s0) * h);
 for t = 1 : lengthSound
-    scalar = 1;
+    scalar = sin(10 * pi * t / Fs);
+% scalar = 1;
     Vb = VbInit * scalar;
     if bowModel == "simple"
         b = 2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev;
@@ -146,22 +152,23 @@ for t = 1 : lengthSound
                 if Vrel==0
                   zss=fs/sig0;
                 end
-                
+%                 zss = abs(zss);
                 %elasto-plastic function \alpha (v,z)
-                alpha=0;
+                zssPrev = zss;
+                zss = abs(zss);
+                alpha = 0;
                 if (sign(z)==sign(Vrel))
                     if ((abs(z)>z_ba) && (abs(z)<zss))
-                        arg=pi*(z-0.5*(zss+z_ba))/(zss-z_ba);
-                        sinarg=sin(arg);
+                        arg=pi*(z-sign(z)*0.5*(zss+z_ba))/(zss-z_ba);
+                        sinarg=sin(sign(z)*arg);
                         alpha=0.5*(1+sinarg);
                     elseif (abs(z)>zss)
                         alpha=1;
                     end
                 end
-
+                zss = zssPrev;
                 %non-linear function estimate
                 fnl=Vrel*(1-alpha*z/zss);
-                
                 %% compute derivatives
                 
                 %dz_ss/dv
@@ -169,15 +176,19 @@ for t = 1 : lengthSound
                 
                 dalpha_v=0; %d(alpha)/dv 
                 dalpha_z=0; %d(alpha)/dz
+                
+                zss = abs(zss);
                 if ((sign(z)==sign(Vrel)) && (abs(z)>z_ba) && (abs(z)<zss) )
                     cosarg=cos(arg);
                     dalpha_v=0.5*pi*cosarg*dz_ss*(z_ba-z)/(zss-z_ba)^2; 
                     dalpha_z=0.5*pi*cosarg/(zss-z_ba);
                 end
+                zss = zssPrev;
                 
                 d_fnlv = 1-z * ((alpha +Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
                 d_fnlz = -Vrel/zss*(z*dalpha_z +alpha);
-                d_fnl = d_fnlv * -0.2295 + d_fnlz * k / 2;
+                K1 = -k^2 / (h * (1 + s0 * k));
+                d_fnl = K1 * d_fnlv + d_fnlz * k / 2;
                 
                 zdotNext = zdot - (fnl - zdot)/(d_fnl - 1);
                 eps = abs(zdotNext-zdot);
@@ -198,20 +209,27 @@ for t = 1 : lengthSound
         mu = (mud + (mus - mud) * VbInit/2) / (VbInit/2 + v - Vb);
         excitation = k^2*J*Fn*mu;
     end
-    uNext = (B * u + C * uPrev) - excitation;
-    
+    uNext = (B * u + C * uPrev) - excitation / (1 + s0 * k);
+    zSave(t) = z;
+    zDotSave(t) = zdot;
     zPrev = z;
     zDotPrev = zdot;
     % Plot
-    if drawString == false && mod(t,1) == 0 %&& t > Fs * 2
+    if drawString == true && mod(t,100) == 0 %&& t > Fs * 2
         clf;
+        subplot(3,1,1)
         plot(uNext);
+        subplot(3,1,2)
+        plot(zSave(1:t))
+        subplot(3,1,3)
+        plot(zDotSave(1:t))
 %         ylim([-1e-6 1e-6])
 %         hold on;
 %         scatter(floor(bp*N), 0);
+        
         drawnow;
     end
-    
+    alphaSave(t) = alpha;
     % Save output
     out(t) = uNext(pickup);
     

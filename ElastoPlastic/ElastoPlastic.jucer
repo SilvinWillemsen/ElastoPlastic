@@ -2,6 +2,32 @@
 
 <JUCERPROJECT id="DrqUSn" name="ElastoPlastic" projectType="guiapp" jucerVersion="5.4.1">
   <MAINGROUP id="NRLeSw" name="ElastoPlastic">
+    <GROUP id="{A00824A9-B907-E249-9DEB-A58B2D8DA539}" name="SenselWrapper">
+      <GROUP id="{3DD958D7-5366-55AC-F668-E5A9AA6F71D3}" name="lib">
+        <FILE id="acJVsN" name="sensel.c" compile="1" resource="0" file="SenselWrapper/lib/sensel.c"/>
+        <FILE id="JRXlaR" name="sensel.h" compile="0" resource="0" file="SenselWrapper/lib/sensel.h"/>
+        <FILE id="CrRiHU" name="sensel_device.h" compile="0" resource="0" file="SenselWrapper/lib/sensel_device.h"/>
+        <FILE id="GeIgth" name="sensel_device_vidpid.h" compile="0" resource="0"
+              file="SenselWrapper/lib/sensel_device_vidpid.h"/>
+        <FILE id="kKM5n7" name="sensel_protocol.h" compile="0" resource="0"
+              file="SenselWrapper/lib/sensel_protocol.h"/>
+        <FILE id="sMmaZX" name="sensel_register.c" compile="1" resource="0"
+              file="SenselWrapper/lib/sensel_register.c"/>
+        <FILE id="xukksf" name="sensel_register.h" compile="0" resource="0"
+              file="SenselWrapper/lib/sensel_register.h"/>
+        <FILE id="i2Ht21" name="sensel_register_map.h" compile="0" resource="0"
+              file="SenselWrapper/lib/sensel_register_map.h"/>
+        <FILE id="HFoXxQ" name="sensel_serial.h" compile="0" resource="0" file="SenselWrapper/lib/sensel_serial.h"/>
+        <FILE id="o6Ohwe" name="sensel_serial_linux.c" compile="1" resource="0"
+              file="SenselWrapper/lib/sensel_serial_linux.c"/>
+        <FILE id="Nx3iRn" name="sensel_serial_win.c" compile="1" resource="0"
+              file="SenselWrapper/lib/sensel_serial_win.c"/>
+        <FILE id="iobSwu" name="sensel_types.h" compile="0" resource="0" file="SenselWrapper/lib/sensel_types.h"/>
+      </GROUP>
+      <FILE id="nbb116" name="LICENSE" compile="0" resource="1" file="SenselWrapper/LICENSE"/>
+      <FILE id="dvy5Ac" name="README.md" compile="0" resource="1" file="SenselWrapper/README.md"/>
+      <FILE id="fmSnf6" name="SenselWrapper.h" compile="0" resource="0" file="SenselWrapper/SenselWrapper.h"/>
+    </GROUP>
     <GROUP id="{86E23029-BDF1-6F79-6487-52E76EF4DF17}" name="Source">
       <FILE id="GlhSDr" name="ViolinString.cpp" compile="1" resource="0"
             file="Source/ViolinString.cpp"/>

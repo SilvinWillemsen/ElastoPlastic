@@ -18,7 +18,9 @@
 */
 class MainComponent   : public AudioAppComponent,
                         public HighResolutionTimer,
-                        public Timer
+                        public Timer,
+                        public Slider::Listener,
+                        public Button::Listener
 {
 public:
     //==============================================================================
@@ -37,10 +39,10 @@ public:
     void hiResTimerCallback() override;
     void timerCallback() override;
     
-    float clip(float output);
+    double clip (double output, double min = -1.0, double max = 1.0);
     
-//    void sliderValueChanged (Slider* slider) override;
-//    void buttonClicked (Button* button) override;
+    void sliderValueChanged (Slider* slider) override;
+    void buttonClicked (Button* button) override;
 
 private:
     //==============================================================================
@@ -61,5 +63,13 @@ private:
     int appHeight = 800;
     int controlsWidth = 100;
 
+    Slider forceSlider;
+    Slider scaleGraphics;
+    ToggleButton toggleGraphics;
+    Label forceLabel;
+    Label scaleLabel;
+    bool initGraphics = true;
+    
+    int amountOfSensels = 1;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

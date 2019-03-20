@@ -12,7 +12,7 @@
 #include "ViolinString.h"
 
 //==============================================================================
-ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowModel) : fs(fs), ogFreq(freq), stringID(stringID), bowModel(bowModel)
+ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowModel) : fs(fs), ogFreq(freq), stringID(stringID), bowModelInit(bowModel)
 {
     // In your constructor, you should add any child components, and
     // initialise any special settings that your component needs.
@@ -24,7 +24,7 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     c = ogFreq * 2; // Wave speed
     k = 1 / fs;       // Time-step
     
-    s0 = 0.1;     // Frequency-independent damping
+    s0 = 1;     // Frequency-independent damping
     s1 = 0.005; // Frequency-dependent damping
     
     //    B = 0.0001;                             // Inharmonicity coefficient
@@ -64,20 +64,20 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     a = 100; // Free parameter
     BM = sqrt(2 * a) * exp1(0.5);
     
-    _Vb = 0.2; // Bowing speed
+    _Vb = -0.1; // Bowing speed
     _Fb = 80;  // Bowing force / total mass of bow;
     
     // Elasto-Plastic bow model
     
     //// the Contact Force (be with you) //////
-    double mus = 0.4; // static friction coeff
-    double mud = 0.2; // dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
-    strv = 0.1;      // "stribeck" velocity
+    mus = 0.8; // static friction coeff
+    mud = 0.35; // dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
+    strv = 0.08;      // "stribeck" velocity
     
     Fn = 1;    // Normal force
     
-    fC=mud*Fn; // coulomb force
-    fS=mus*Fn; // stiction force
+    fC = mud * Fn; // coulomb force
+    fS = mus * Fn; // stiction force
     
     sig0 = 10000;                   // bristle stiffness
     sig1 = 0.1*sqrt(sig0);          // bristle damping
@@ -118,8 +118,9 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     E2 = k * k * (1 / h);
     
     reset();
-    q = 0.1;
+    q = _Vb;
     std::cout << N << std::endl;
+    K1 = -sig1 / (sig2 + 2 / k + 2 * s0);
 }
 
 void ViolinString::reset()
@@ -128,7 +129,11 @@ void ViolinString::reset()
         for (int j = 0; j < N; ++j)
             uVecs[i][j] = 0.0;
     qPrev = 0;
-    q = 0.1;
+    q = 0;
+    zPrev = 0;
+    zDotPrev = 0;
+    z = 0;
+    zDot = 0;
 }
 
 ViolinString::~ViolinString()
@@ -143,8 +148,8 @@ void ViolinString::paint(Graphics &g)
      You should replace everything in this method with your own
      drawing code..
      */
-    
-    g.setColour(Colours::cyan);
+    bowModel = bowModelInit;
+    g.setColour(bowModel == elastoPlastic ? Colours::cyan : Colours::limegreen);
     g.strokePath(generateStringPathAdvanced(), PathStrokeType(2.0f));
     //    g.setColour(Colours::green);
     //    for (int i = 1; i < N; ++i)
@@ -246,9 +251,9 @@ void ViolinString::bow()
             
             uNext[bp] = uNext[bp] - excitation * ((alpha - 1) * (alpha + 1) * (alpha - 2)) / 2.0;
             
-            if (bp < N - 4)
+            if (bp < N - 3)
                 uNext[bp + 1] = uNext[bp + 1] - excitation * (alpha * (alpha + 1) * (alpha - 2)) / -2.0;
-            if (bp < N - 5)
+            if (bp < N - 4)
                 uNext[bp + 2] = uNext[bp + 2] - excitation * (alpha * (alpha + 1) * (alpha - 1)) / 6.0;
         }
     }
@@ -325,9 +330,10 @@ void ViolinString::newtonRaphson()
     b = 2.0 / k * Vb - b1 * (uI - uIPrev) - gOh * (uI1 - 2 * uI + uIM1) + kOh * (uI2 - 4 * uI1 + 6 * uI - 4 * uIM1 + uIM2) + 2 * s0 * Vb - b2 * ((uI1 - 2 * uI + uIM1) - (uIPrev1 - 2 * uIPrev + uIPrevM1));
     eps = 1;
     int i = 0;
-    
+//    std::cout << fS << std::endl;
     if (bowModel == exponential)
     {
+//        std::cout<< "Exponential model" << std::endl;
         while (eps > tol)
         {
             q = qPrev - (Fb * BM * qPrev * exp1(-a * qPrev * qPrev) + 2 * qPrev / k + 2 * s0 * qPrev + b) / (Fb * BM * (1 - 2 * a * qPrev * qPrev) * exp1(-a * qPrev * qPrev) + 2 / k + 2 * s0);
@@ -342,11 +348,12 @@ void ViolinString::newtonRaphson()
     }
     else if (bowModel == elastoPlastic)
     {
+//        std::cout << "Elasto-Plastic model" << std::endl;
         while (eps > tol && i < 50)
         {
             espon = exp1(-((q * q) * oOstrvSq));         //exponential function
             zss = sgn(q) * (fC + (fS - fC) * espon) / sig0;   //steady state curve: z_ss(v)
-            
+//            std::cout << zss << std::endl;
             if (q==0)
                 zss = fs / sig0;
             
@@ -384,7 +391,7 @@ void ViolinString::newtonRaphson()
             
             d_fnlv = 1 - z * ((alpha + q * dalpha_v) * zss - dz_ss * alpha * q)/(zss * zss);
             d_fnlz = -q / zss * (z * dalpha_z + alpha);
-            d_fnl = d_fnlv * -0.2295 + d_fnlz * 0.5 * k;
+            d_fnl = d_fnlv * K1 + d_fnlz * 0.5 * k;
             
             zDotNext = zDot - (fnl - zDot)/(d_fnl - 1);
             eps = abs (zDotNext-zDot);
@@ -432,7 +439,7 @@ Path ViolinString::generateStringPathAdvanced()
     
     for (int y = 0; y < N; y++)
     {
-        int visualScaling = bowModel == elastoPlastic ? 25000000 : 50000;
+        int visualScaling = (bowModel == elastoPlastic ? 500000 : 10000) * visualScale;
         float newY = uNext[y] * visualScaling + stringBounds;
         if (isnan(newY))
             newY = 0;
@@ -476,6 +483,7 @@ double ViolinString::clamp (double input, double min, double max)
 
 void ViolinString::mouseDown(const MouseEvent &e)
 {
+    std::cout << (bowModel == exponential ? "Exponential" : "Elasto-Plastic") << std::endl;
     if (ModifierKeys::getCurrentModifiers() == ModifierKeys::leftButtonModifier)
     {
         _Vb = 0.1;
@@ -505,7 +513,7 @@ void ViolinString::mouseDown(const MouseEvent &e)
 
 void ViolinString::mouseDrag(const MouseEvent &e)
 {
-    double maxVb = 0.2;
+    double maxVb = -0.2;
     
     if (cpMoveIdx != -1 || ModifierKeys::getCurrentModifiers() == ModifierKeys::altModifier + ModifierKeys::leftButtonModifier)
     {
@@ -523,7 +531,7 @@ void ViolinString::mouseDrag(const MouseEvent &e)
     else if (cpMoveIdx == -1)
     {
         float bowVelocity = e.y / (static_cast<double>(getHeight())) * maxVb;
-        setVb(bowVelocity);
+        setVb (bowVelocity);
         
         float bowPositionX = e.x <= 0 ? 0 : (e.x < getWidth() ? e.x / static_cast<double>(getWidth()) : 1);
         float bowPositionY = e.y <= 0 ? 0 : (e.y >= getHeight() ? 1 : e.y / static_cast<double>(getHeight()));
@@ -546,8 +554,21 @@ double ViolinString::linearInterpolation(double* uVec, int bp, double alph)
 
 double ViolinString::cubicInterpolation(double* uVec, int bp, double alph)
 {
-    return uVec[bp - 1] * (alph * (alph - 1) * (alph - 2)) / -6.0
+    double val1 = uVec[bp - 1] * (alph * (alph - 1) * (alph - 2)) / -6.0
     + uVec[bp] * ((alph - 1) * (alph + 1) * (alph - 2)) / 2.0
     + uVec[bp + 1] * (alph * (alph + 1) * (alph - 2)) / -2.0
     + uVec[bp + 2] * (alph * (alph + 1) * (alph - 1)) / 6.0;
+    
+    double val = 0;
+    if (bp > 3)
+        val = val + uVec[bp - 1] * (alph * (alph - 1) * (alph - 2)) / -6.0;
+    
+    val = val + uVec[bp] * ((alph - 1) * (alph + 1) * (alph - 2)) / 2.0;
+    
+    if (bp < N - 3)
+        val = val + uVec[bp + 1] * (alph * (alph + 1) * (alph - 2)) / -2.0;
+    if (bp < N - 4)
+        val = val + uVec[bp + 2] * (alph * (alph + 1) * (alph - 1)) / 6.0;
+//    std::cout << val - val1 << std::endl;
+    return val;
 }
