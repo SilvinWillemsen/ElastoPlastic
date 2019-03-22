@@ -29,6 +29,8 @@
       <FILE id="fmSnf6" name="SenselWrapper.h" compile="0" resource="0" file="SenselWrapper/SenselWrapper.h"/>
     </GROUP>
     <GROUP id="{86E23029-BDF1-6F79-6487-52E76EF4DF17}" name="Source">
+      <FILE id="XfM02Y" name="DataVisual.cpp" compile="1" resource="0" file="Source/DataVisual.cpp"/>
+      <FILE id="MjU8OZ" name="DataVisual.h" compile="0" resource="0" file="Source/DataVisual.h"/>
       <FILE id="GlhSDr" name="ViolinString.cpp" compile="1" resource="0"
             file="Source/ViolinString.cpp"/>
       <FILE id="h4lVKS" name="ViolinString.h" compile="0" resource="0" file="Source/ViolinString.h"/>

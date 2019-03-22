@@ -71,10 +71,10 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     
     //// the Contact Force (be with you) //////
     mus = 0.8; // static friction coeff
-    mud = 0.35; // dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
+    mud = 0.3; // dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
     strv = 0.08;      // "stribeck" velocity
     
-    Fn = 1;    // Normal force
+    Fn = 100;    // Normal force
     
     fC = mud * Fn; // coulomb force
     fS = mus * Fn; // stiction force
@@ -513,7 +513,7 @@ void ViolinString::mouseDown(const MouseEvent &e)
 
 void ViolinString::mouseDrag(const MouseEvent &e)
 {
-    double maxVb = -0.2;
+    double maxVb = 0.2;
     
     if (cpMoveIdx != -1 || ModifierKeys::getCurrentModifiers() == ModifierKeys::altModifier + ModifierKeys::leftButtonModifier)
     {

@@ -18,7 +18,7 @@ sigma=[sig0,sig1,sig2];
 
 z_ba=0.5*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
 
-Vrel = [0.2 * ones(3001,1)];
+Vrel = [-0.2 * ones(3001,1)];
 espon=exp(-(Vrel/strv).^2);         %exponential function
 zss=sign(Vrel).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
 if Vrel==0
@@ -28,12 +28,14 @@ end
 z = -0.00015:0.0000001:0.00015;
 alphaVar=zeros(3001,1);
 for i = 1:3001
-    if ((abs(z(i))>z_ba) && (abs(z(i))<zss(i)))
-        arg=pi*(z(i)-sign(z(i)) * 0.5*(zss(i)+z_ba))/(zss(i)-z_ba);
-        sinarg(i)=sin(sign(z(i)) * arg);
-        alphaVar(i)=0.5*(1+sinarg(i));
-    elseif (abs(z(i))>zss(i))
-        alphaVar(i)=1;
+    if (sign(z(i))==sign(Vrel(i)))
+        if ((abs(z(i))>z_ba) && (abs(z(i))<zss(i)))
+            arg=pi*(z(i) - 0.5*(zss(i)+z_ba))/(zss(i)-z_ba);
+            sinarg(i)=sin(arg);
+            alphaVar(i)=0.5*(1+sinarg(i));
+        elseif (abs(z(i))>zss(i))
+            alphaVar(i)=1;
+        end
     end
 end
 

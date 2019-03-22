@@ -11,6 +11,7 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "ViolinString.h"
 #include "../SenselWrapper/SenselWrapper.h"
+#include "DataVisual.h"
 //==============================================================================
 /*
     This component lives inside our window, and this is where you should put all
@@ -44,6 +45,9 @@ public:
     void sliderValueChanged (Slider* slider) override;
     void buttonClicked (Button* button) override;
 
+    int sgn (double val) { return (0 < val) - (val < 0); };
+    
+    void drawData (bool createNew = false);
 private:
     //==============================================================================
     // Your private member variables go here...
@@ -56,7 +60,7 @@ private:
     int numStrings;
     OwnedArray<ViolinString> violinStrings;
     OwnedArray<Sensel> sensels;
-    
+    OwnedArray<DataVisual> dataVisuals;
     unsigned long stateUpdateCounter = 0;
     
     int appWidth = 1440;

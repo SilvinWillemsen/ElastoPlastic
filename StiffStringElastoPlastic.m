@@ -1,5 +1,5 @@
-% clear all;
-% close all;
+clear all;
+close all;
 clc;
 
 Fs = 44100;     % Sampling rate
@@ -68,7 +68,7 @@ qPrev = 0;
 
 drawString = true;
             
-bp = 0.45; 
+bp = 0.3; 
 I = zeros(N,1);
 I(floor(bp * N)) = 1;
 J = 1/h * I;
@@ -77,8 +77,8 @@ mus=0.8;               % static friction coeff
 mud=0.3;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
 strv=1e-1;             % "stribeck" velocity
 
-Fn = 10;
-
+FnInit = 1;
+Fn = FnInit;
 fc=mud*Fn;             % coulomb force
 fs=mus*Fn;             % stiction force
 ssparam=[fc,fs,strv];            
@@ -118,12 +118,48 @@ bowModel = "elastoPlastic";
 Vrel = VbInit;
 VrelPrev = VbInit;
 excitation = 0;
-
+figure('Renderer', 'painters', 'Position', [100 100 1400 400])
+VbPrev = 0;
+bowVertPosPrev = 0;
 K1 = -sig1 / ((sig2 + 2/k + 2*s0) * h);
+
+zVec = -1e-3:1e-5:1e-3;
+vRelVec = -0.5:0.001:0.5;
+for ii = 1 : length(vRelVec)
+    espon=exp(-(vRelVec(ii)/strv).^2);%exponential function
+    zssVec(ii) =sign(vRelVec(ii)).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
+    if vRelVec(ii)==0
+      zssVec(ii)=fs/sig0;
+    end
+end
+zSave = zeros(lengthSound, 1);
+vRelSave = zeros(lengthSound, 1);
+zDotSave = zeros(lengthSound, 1);
+Fsave = zeros(lengthSound, 1);
+scalar = 0;
 for t = 1 : lengthSound
-    scalar = sin(10 * pi * t / Fs);
-% scalar = 1;
+%     if round(scalar * 1000)/1000 == 1
+if t < 5000
+    scalar = 1/5000 * t;
+else
+        scalar = 1;
+end
+%     else
+%         scalar = sin(10 * pi * t / Fs);
+%     end
+    
     Vb = VbInit * scalar;
+    Fn = abs(FnInit * scalar);
+    if Fn == 0
+        Fn = 0.001;
+    end
+    fc=mud*Fn;             % coulomb force
+    fs=mus*Fn;             % stiction force
+    z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
+
+    bowVertPos = bowVertPosPrev + k/2 * (Vb + VbPrev);
+    VbPrev = Vb;
+    bowVertPosPrev = bowVertPos;
     if bowModel == "simple"
         b = 2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev;
         eps = 1;
@@ -138,7 +174,10 @@ for t = 1 : lengthSound
                 disp('Nope');
             end
         end
-        excitation = k^2*J*Fb*BM*q*exp(-a*q^2);
+        F = Fb*BM*q*exp(-a*q^2);
+        Fsave(t) = F;
+        excitation = k^2*J*F;
+        vRelSave(t) = q;
     elseif bowModel == "elastoPlastic"
         
         % calculate pre-computable part of the FDS
@@ -187,7 +226,8 @@ for t = 1 : lengthSound
                 
                 d_fnlv = 1-z * ((alpha +Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
                 d_fnlz = -Vrel/zss*(z*dalpha_z +alpha);
-                K1 = -k^2 / (h * (1 + s0 * k));
+%                 K1 = -k^2 / (h * (1 + s0 * k));
+                K1 = -sig1 / (sig2 + 2/k + 2 * sig0);
                 d_fnl = K1 * d_fnlv + d_fnlz * k / 2;
                 
                 zdotNext = zdot - (fnl - zdot)/(d_fnl - 1);
@@ -199,11 +239,13 @@ for t = 1 : lengthSound
                 i = i + 1;
             end
             F = sig0 * z + sig1 * zdot + sig2 * Vrel;
+            Fsave(t) = F;
         else 
             zdot=0; err=0; count=0;
             z=0; f_fr=0; v=vs;
         end
         excitation = k^2*J*F;
+        vRelSave(t) = Vrel;
     elseif bowModel == "hyperbolic"
         v = 1/k * (I' * u - I' * uPrev);
         mu = (mud + (mus - mud) * VbInit/2) / (VbInit/2 + v - Vb);
@@ -211,27 +253,99 @@ for t = 1 : lengthSound
     end
     uNext = (B * u + C * uPrev) - excitation / (1 + s0 * k);
     zSave(t) = z;
+    
     zDotSave(t) = zdot;
     zPrev = z;
     zDotPrev = zdot;
     % Plot
-    if drawString == true && mod(t,100) == 0 %&& t > Fs * 2
-        clf;
-        subplot(3,1,1)
+    if drawString == true && mod(t,5) == 0 && t > Fs / 2
+        clf
+        subplot(2,1,1)
+%         cla
         plot(uNext);
-        subplot(3,1,2)
-        plot(zSave(1:t))
-        subplot(3,1,3)
+        hold on;
+        ylim([-1e-5 1e-5])
+        scatter(repmat(floor(bp*N), 20, 1), [-1e-5:1e-6:1e-5-1e-6]+mod(bowVertPos/20,1e-6),'.')
+%         if Vb < 0
+%             annotation("textarrow", [bp bp], [0.85 0.8]);
+%         else
+%             annotation("textarrow", [bp bp], [0.8 0.85]);
+%         end
+        text(floor(bp*N) - 2, 0, "$V_B =$ " + num2str(Vb, 2), 'interpreter', 'latex', 'horizontalAlignment', 'right');
+        title("String displacement at sample " + num2str(t), 'interpreter', 'latex','Fontsize', 16)
+        
+        %% Steady State Curve
+        subplot(2,4,5)
+        plot(vRelVec, zssVec)
+        hold on;
+        zssVecVal = find (round(vRelVec * 1e3) == round(Vrel * 1e3));
+        if length(zssVecVal) == 1
+            zssVecPlotVal = zssVecVal;
+        end
+        scatter(round(Vrel * 1e3)*1e-3, zssVec(zssVecPlotVal));     
+        text(round(Vrel * 1e3)*1e-3, zssVec(zssVecPlotVal) - 1.5e-4, "$v =$ " + num2str(Vrel, 2), 'interpreter', 'latex', 'horizontalAlignment', 'center');
+        xlim([-0.5 0.5])
+%         title("$z$", 'interpreter', 'latex')
+        xlabel('$v$','interpreter', 'latex')
+        ylabel("$z_{ss}(v)$", 'interpreter', 'latex')
+        title('Steady-state curve $z_{ss}(v)$', 'interpreter', 'latex', 'Fontsize', 16)
+
+        %% Adhesion Map
+        subplot(2,4,6)
+        alphaPlot = zeros(length(zVec),1);
+        zssPlot = abs(zss);
+        for ii = 1:length(zVec)
+            if ((abs(zVec(ii))>z_ba) && (abs(zVec(ii))<zssPlot))
+                arg=pi*(zVec(ii)-sign(zVec(ii))*0.5*(zssPlot+z_ba))/(zssPlot-z_ba);
+                sinarg=sin(sign(zVec(ii))*arg);
+                alphaPlot(ii)=0.5*(1+sinarg);
+            elseif (abs(zVec(ii))>zssPlot)
+                alphaPlot(ii)=1;
+            end
+        end
+        plot(zVec, alphaPlot);
+        text(zss + 5e-5, 0.5, '$z_{ss}(v)$', 'interpreter', 'latex', 'horizontalAlignment', 'center')
+%       
+        hold on;
+        plot([zss zss], [min(ylim) max(ylim)], '--');
+        alphaIdx = find(round(zVec*1e5) == floor(1e5*z));
+        scatter(floor(1e5*z)*1e-5, alphaPlot(alphaIdx));
+        text(floor(1e5*z)*1e-5+3e-5, alphaPlot(alphaIdx) - 0.05, '$z$', 'interpreter', 'latex', 'horizontalAlignment', 'center')
+%         title('$\alpha$','interpreter', 'latex', 'Fontsize', 18)
+        xlabel('$z$','interpreter', 'latex')
+        ylabel('$\alpha(v,z)$','interpreter', 'latex')
+        title('Adhesion map $\alpha(v,z)$', 'interpreter', 'latex', 'Fontsize', 16)
+        
+        %% Velocity of Mean Bristle Displacement
+        subplot(2,4,7)
         plot(zDotSave(1:t))
-%         ylim([-1e-6 1e-6])
-%         hold on;
-%         scatter(floor(bp*N), 0);
+        xlabel('$n$ (samples)','interpreter', 'latex')
+        ylabel("$\dot z$", 'interpreter', 'latex')
+        title('Velocity of the mean bristle displacement', 'interpreter', 'latex', 'Fontsize', 16)
+
+        %% Mean Bristle Displacement
+        subplot(2,4,8)
+%         plot(zSave(1:t))
+% %         title("$z$", 'interpreter', 'latex')
+%         xlabel('$n$ (samples)','interpreter', 'latex')
+%         ylabel("$z$", 'interpreter', 'latex')
+%         title('Mean bristle displacement $z$', 'interpreter', 'latex', 'Fontsize', 16)
+     numDots = 100;   
+        mat = [[1:-1/numDots:1/numDots]', [1:-1/numDots:1/numDots]', [1:-1/numDots:1/numDots]'];
+        if t > numDots
+            scatter(vRelSave(t-numDots+1:t), Fsave(t-numDots+1:t), 40, mat);
+%         xlim ([-0.5 0.5]);
+        end
+        ylabel("$f(v,z)$", 'interpreter', 'latex')
+        ylabel("$v$", 'interpreter', 'latex')
+        title('Force function $f(v,z)$ against relative velocity', 'interpreter', 'latex', 'Fontsize', 16)
         
         drawnow;
     end
-    alphaSave(t) = alpha;
+%     alphaSave(t) = alpha;
     % Save output
     out(t) = uNext(pickup);
+%     out2(t) = u(pickup) + 1 / 2 * (uNext(pickup) - uPrev(pickup));
     
     % update state vectors
     uPrev = u;

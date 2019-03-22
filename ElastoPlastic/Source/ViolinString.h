@@ -67,6 +67,7 @@ public:
     void setFingerPosition(double fingerPos){ fp = clamp(fingerPos, 0, 1); };
     void setBow(bool val) { _isBowing.store(val); };
     void setVb(double val) { _Vb = val; };
+    double getVb() { return _Vb; };
     void setFb(double val) { _Fb = val; };
     void setBowPos(double bpX, double bpY) { _bpX = bpX; _bpY = bpY; };
     void setFingerOn (bool val) { fingerOn = val; };
@@ -113,7 +114,10 @@ public:
     BowModel getModel() { return bowModel; };
     
     void setFn (double val) { Fn = val; fC = mud * Fn; fS = mus * Fn; };
-    
+    double getFC() { return fC; };
+    double getFS() { return fS; };
+    double getSig0() { return sig0; };
+    double getZ() { return z; };
     void scaleVisuals (double val) { visualScale = val; };
     
 private:
