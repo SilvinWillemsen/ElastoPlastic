@@ -121,10 +121,10 @@ public:
     void scaleVisuals (double val) { visualScale = val; };
     
 private:
-    double fs, freq, c, k, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
-    
+    double fs, freq, c, k, kHalf, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
+    double velCalcDiv = 0; //Velocity calculation division
     //Elasto plastic vars
-    double z, zPrev, zDot, zDotNext, zDotPrev, fnl, z_ba, Fn, fC, fS, sig0, sig1, sig2, E2, oOstrvSq, zss, dz_ss, strv, espon, alpha, dalpha_v, dalpha_z, d_fnlv, d_fnlz, d_fnl, arg, mus, mud, K1;
+    double z, zPrev, zDot, zDotNext, zDotPrev, fnl, z_ba, Fn, fC, fS, sig0, sig1, sig2, oOSig0, E2, oOstrvSq, zss, zssNotAbs, oOZss, oOZssMinZba, dz_ss, strv, espon, alpha, dalpha_v, dalpha_z, d_fnlv, d_fnlz, d_fnl, arg, mus, mud, K1;
     double ff = 0.7;
     atomic<double> lambdaSq;
     atomic<double> _Vb, _Fb, _bpX, _bpY;
@@ -161,7 +161,7 @@ private:
     bool fingerOn = false;
     int fpx = 0;
     
-    StringInterpolType interpolation = linear;
+    StringInterpolType interpolation = cubic;
     int cpMoveIdx = -1;
     int cpMR = 10; //connection point move range
     
@@ -172,6 +172,11 @@ private:
     
     double visualScale = 5.0; 
     
+    double oneOverSix = 1/6.0;
+    long limitCount = 0;
+    int maxI = 0;
+    
+    bool simplySupported = true;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ViolinString)
 };
 

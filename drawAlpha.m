@@ -18,7 +18,7 @@ sigma=[sig0,sig1,sig2];
 
 z_ba=0.5*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
 
-Vrel = [-0.2 * ones(3001,1)];
+Vrel = [0.2 * ones(3001,1)];
 espon=exp(-(Vrel/strv).^2);         %exponential function
 zss=sign(Vrel).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
 if Vrel==0
@@ -28,7 +28,7 @@ end
 z = -0.00015:0.0000001:0.00015;
 alphaVar=zeros(3001,1);
 for i = 1:3001
-    if (sign(z(i))==sign(Vrel(i)))
+%     if (sign(z(i))==sign(Vrel(i)))
         if ((abs(z(i))>z_ba) && (abs(z(i))<zss(i)))
             arg=pi*(z(i) - 0.5*(zss(i)+z_ba))/(zss(i)-z_ba);
             sinarg(i)=sin(arg);
@@ -36,7 +36,7 @@ for i = 1:3001
         elseif (abs(z(i))>zss(i))
             alphaVar(i)=1;
         end
-    end
+%     end
 end
 
 % numSamps = length(z);
@@ -55,11 +55,11 @@ figure('Renderer', 'painters', 'Position', [100 100 600 420])
 hold on;
 ylim([-0.07 1.07])
 xlim([-1.5e-4 1.5e-4])
-patch([-z_ba z_ba z_ba -z_ba], [max(ylim) max(ylim) min(ylim) min(ylim)], [0.5 1 0.5], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
-patch([z_ba zss(1) zss(1) z_ba], [max(ylim) max(ylim) min(ylim) min(ylim)], [1 0.5 0.5], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
-patch([zss(1) zss(1)*1.5 zss(1)*1.5 zss(1) ], [max(ylim) max(ylim) min(ylim) min(ylim)], [0.5 0.5 1], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
-patch(-[z_ba zss(1) zss(1) z_ba], [max(ylim) max(ylim) min(ylim) min(ylim)], [1 0.5 0.5], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
-patch(-[zss(1) zss(1)*1.5 zss(1)*1.5 zss(1) ], [max(ylim) max(ylim) min(ylim) min(ylim)], [0.5 0.5 1], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
+patch([-z_ba z_ba z_ba -z_ba], [max(ylim) max(ylim) min(ylim) min(ylim)], [1 1 0], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
+patch([z_ba zss(1) zss(1) z_ba], [max(ylim) max(ylim) min(ylim) min(ylim)], [1 0.65 0], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
+patch([zss(1) zss(1)*1.5 zss(1)*1.5 zss(1) ], [max(ylim) max(ylim) min(ylim) min(ylim)], [1 0 0], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
+patch(-[z_ba zss(1) zss(1) z_ba], [max(ylim) max(ylim) min(ylim) min(ylim)], [1 0.65 0], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
+patch(-[zss(1) zss(1)*1.5 zss(1)*1.5 zss(1) ], [max(ylim) max(ylim) min(ylim) min(ylim)], [1 0 0], 'EdgeColor', 'none', 'FaceAlpha', 0.5);
 locations = [-zss(1); -z_ba; 0; z_ba; zss(1)];
 for i = 1:length(locations)
     if i == 3

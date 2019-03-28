@@ -61,5 +61,9 @@ private:
     unsigned long numDataPoints;
     
     GraphType graphType;
+    static const int margin = 20;
+    static const int halfMargin = margin * 0.5;
+    
+    Label dataPointLabel;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DataVisual)
 };

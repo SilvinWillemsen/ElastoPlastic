@@ -14,8 +14,6 @@
 //==============================================================================
 ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowModel) : fs(fs), ogFreq(freq), stringID(stringID), bowModelInit(bowModel)
 {
-    // In your constructor, you should add any child components, and
-    // initialise any special settings that your component needs.
     uVecs.resize(3);
     
     _bpX = 0.5;
@@ -23,6 +21,8 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     
     c = ogFreq * 2; // Wave speed
     k = 1 / fs;       // Time-step
+    
+    kHalf = 0.5 * k;
     
     s0 = 1;     // Frequency-independent damping
     s1 = 0.005; // Frequency-dependent damping
@@ -119,8 +119,13 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     
     reset();
     q = _Vb;
-    std::cout << N << std::endl;
     K1 = -sig1 / (sig2 + 2 / k + 2 * s0);
+    std:cout << N << std::endl;
+    
+//    K1 = -0.1;
+    velCalcDiv =  1 / (sig2 + 2/k + 2 * s0);
+    oOSig0 = 1 / sig0;
+
 }
 
 void ViolinString::reset()
@@ -151,11 +156,7 @@ void ViolinString::paint(Graphics &g)
     bowModel = bowModelInit;
     g.setColour(bowModel == elastoPlastic ? Colours::cyan : Colours::limegreen);
     g.strokePath(generateStringPathAdvanced(), PathStrokeType(2.0f));
-    //    g.setColour(Colours::green);
-    //    for (int i = 1; i < N; ++i)
-    //    {
-    //        g.fillEllipse(i * getWidth() / double(N) - 3, getHeight() / 2 - 3, 6, 6);
-    //    }
+
     g.setColour(Colours::orange);
     for (int c = 0; c < cpIdx.size(); ++c)
     {
@@ -180,7 +181,7 @@ void ViolinString::paint(Graphics &g)
     g.setColour(Colour::greyLevel(0.5f).withAlpha(0.5f));
     for (double i = -12.0; i < 12.0; ++i)
     {
-        double val = (1 - (pow(2.0, (i / 12.0)) - 1)) * getWidth() / 2.0;
+        double val = (1 - (pow(2.0, (i / 12.0)) - 1)) * getWidth() * 0.5;
         //            std::cout << val << std::endl;
         
         g.drawLine(val, 0, val, getHeight(), 2);
@@ -227,12 +228,18 @@ void ViolinString::bow()
         uNext[l] = A1 * u[l] + A2 * (u[l + 1] + u[l - 1]) - A3 * (u[l + 2] + u[l - 2]) + A4 * uPrev[l] - A5 * (uPrev[l + 1] + uPrev[l - 1]);
     }
     
+    if (simplySupported)
+    {
+        int l = 1;
+        uNext[l] = (A1 + muSq) * u[l] + A2 * (u[l + 1] + u[l - 1]) - A3 * (u[l + 2]) + A4 * uPrev[l] - A5 * (uPrev[l + 1] + uPrev[l - 1]);
+        l = N - 2;
+        uNext[l] = (A1 + muSq) * u[l] + A2 * (u[l + 1] + u[l - 1]) - A3 * (u[l - 2]) + A4 * uPrev[l] - A5 * (uPrev[l + 1] + uPrev[l - 1]);
+    }
+    
     if (isBowing)
     {
         double alpha = bowPos - floor(bowPos);
-        //        if (t % 10000 == 0 && stringID == 0)
-        //            std::cout << alpha << " " << excitation * 100000 << std::endl;
-        //        ++t;
+
         if (interpolation == noStringInterpol)
         {
             uNext[bp] = uNext[bp] - excitation;
@@ -241,20 +248,20 @@ void ViolinString::bow()
         {
             uNext[bp] = uNext[bp] - excitation * (1-alpha);
             
-            if (bp < N - 3)
+            if (bp < N - (simplySupported ? 2 : 3))
                 uNext[bp + 1] = uNext[bp + 1] - excitation * alpha;
         }
         else if (interpolation == cubic)
         {
-            if (bp > 3)
-                uNext[bp - 1] = uNext[bp - 1] - excitation * (alpha * (alpha - 1) * (alpha - 2)) / -6.0;
+            if (bp > (simplySupported ? 2 : 3))
+                uNext[bp - 1] = uNext[bp - 1] - excitation * (alpha * (alpha - 1) * (alpha - 2)) * -oneOverSix;
             
-            uNext[bp] = uNext[bp] - excitation * ((alpha - 1) * (alpha + 1) * (alpha - 2)) / 2.0;
+            uNext[bp] = uNext[bp] - excitation * ((alpha - 1) * (alpha + 1) * (alpha - 2)) * 0.5;
             
-            if (bp < N - 3)
-                uNext[bp + 1] = uNext[bp + 1] - excitation * (alpha * (alpha + 1) * (alpha - 2)) / -2.0;
-            if (bp < N - 4)
-                uNext[bp + 2] = uNext[bp + 2] - excitation * (alpha * (alpha + 1) * (alpha - 1)) / 6.0;
+            if (bp < N - (simplySupported ? 2 : 3))
+                uNext[bp + 1] = uNext[bp + 1] - excitation * (alpha * (alpha + 1) * (alpha - 2)) * -0.5;
+            if (bp < N - (simplySupported ? 3 : 4))
+                uNext[bp + 2] = uNext[bp + 2] - excitation * (alpha * (alpha + 1) * (alpha - 1)) * oneOverSix;
         }
     }
     
@@ -349,61 +356,83 @@ void ViolinString::newtonRaphson()
     else if (bowModel == elastoPlastic)
     {
 //        std::cout << "Elasto-Plastic model" << std::endl;
+        bool newMaxI = false;
         while (eps > tol && i < 50)
         {
-            espon = exp1(-((q * q) * oOstrvSq));         //exponential function
-            zss = sgn(q) * (fC + (fS - fC) * espon) / sig0;   //steady state curve: z_ss(v)
+            espon = exp1 (-((q * q) * oOstrvSq));         //exponential function
+            zss = sgn(q) * (fC + (fS - fC) * espon) * oOSig0;   //steady state curve: z_ss(v)
 //            std::cout << zss << std::endl;
             if (q==0)
-                zss = fs / sig0;
+                zss = fS * oOSig0;
             
             // elasto-plastic function \alpha (v,z)
             alpha=0;
+            
+            oOZss = 1 / zss; // should use the absolute zss
+            zssNotAbs = zss;
+            zss = abs(zss);
+            
+            oOZssMinZba = 1 / (zss - z_ba); // should use the absolute zss
+            
             if (sgn(z)==sgn(q))
             {
                 if ((abs(z)>z_ba) && (abs(z)<zss))
                 {
-                    arg = double_Pi * (z - 0.5 * (zss + z_ba)) / (zss - z_ba);
-                    alpha = 0.5 * (1 + sin(arg));
+                    arg = double_Pi * (z - sgn(z) * 0.5 * (zss + z_ba)) * oOZssMinZba;
+                    alpha = 0.5 * (1 + sin(sgn(z) * arg));
                 }
                 else if (abs(z)>zss)
                 {
                     alpha=1;
                 }
             }
+            zss = zssNotAbs;
             
             // non-linear function estimate
-            fnl = q * (1 - alpha * z / zss);
+            fnl = q * (1 - alpha * z * oOZss);
             
             // compute derivatives
             
             // dz_ss/dv
-            dz_ss = (-2 * q * sgn(q) / (strv * strv * sig0)) * (fS-fC) * espon;
+            dz_ss = (-2 * q * sgn(q) * oOstrvSq * oOSig0) * (fS-fC) * espon;
             
             dalpha_v=0; //d(alpha)/dv
             dalpha_z=0; //d(alpha)/dz
+            zss = abs(zss);
             if ((sgn(z)==sgn(q)) && (abs(z)>z_ba) && (abs(z)<zss) )
             {
                 double cosarg = cos(arg);
-                dalpha_v = 0.5 * double_Pi * cosarg * dz_ss * (z_ba - z) / ((zss - z_ba) * (zss - z_ba));
-                dalpha_z=0.5 * double_Pi * cosarg / (zss - z_ba);
+                dalpha_v = 0.5 * double_Pi * cosarg * dz_ss * (z_ba - z) * oOZssMinZba * oOZssMinZba;
+                dalpha_z = 0.5 * double_Pi * cosarg * oOZssMinZba;
             }
+            zss = zssNotAbs;
+            d_fnlv = 1 - z * ((alpha + q * dalpha_v) * zss - dz_ss * alpha * q) * oOZss * oOZss;
+            d_fnlz = -q * oOZss * (z * dalpha_z + alpha);
+            d_fnl = d_fnlv * K1 + d_fnlz * kHalf;
             
-            d_fnlv = 1 - z * ((alpha + q * dalpha_v) * zss - dz_ss * alpha * q)/(zss * zss);
-            d_fnlz = -q / zss * (z * dalpha_z + alpha);
-            d_fnl = d_fnlv * K1 + d_fnlz * 0.5 * k;
-            
-            zDotNext = zDot - (fnl - zDot)/(d_fnl - 1);
+            zDotNext = zDot - (fnl - zDot) / (d_fnl - 1);
             eps = abs (zDotNext-zDot);
             zDot = zDotNext;
             
-            z = zPrev + k / 2 * zDotPrev + k / 2 * zDot;
-            q = (-sig0 * z - sig1 * zDot - b) / (sig2 + 2/k + 2*s0);
+            z = zPrev + kHalf * zDotPrev + kHalf * zDot;
+            q = (-sig0 * z - sig1 * zDot - b) * velCalcDiv;
             i = i + 1;
-            if (i == 49)
-                std::cout << "i = " << i << std::endl;
+//            if (i >= maxI)
+//            {
+//                maxI = i;
+//                newMaxI = true;
+//            }
+            
+//            if (i == 49)
+//            {
+//                std::cout << "NR limit! " << limitCount << std::endl;
+//                ++limitCount;
+//            }
         }
-//        std::cout << i << std::endl;
+//        if (newMaxI)
+//            std::cout << maxI << std::endl;
+//        if (i != 1 && i != 3)
+//            std::cout << "i = " << i << std::endl;
         zPrev = z;
         zDotPrev = zDot;
     }
@@ -434,10 +463,10 @@ Path ViolinString::generateStringPathAdvanced()
     Path stringPath;
     stringPath.startNewSubPath(0, stringBounds);
     
-    auto spacing = getWidth() / double(N);
+    auto spacing = getWidth() / static_cast<double>(N);
     auto x = spacing;
     
-    for (int y = 0; y < N; y++)
+    for (int y = 1; y < N-1; y++)
     {
         int visualScaling = (bowModel == elastoPlastic ? 500000 : 10000) * visualScale;
         float newY = uNext[y] * visualScaling + stringBounds;
@@ -483,7 +512,7 @@ double ViolinString::clamp (double input, double min, double max)
 
 void ViolinString::mouseDown(const MouseEvent &e)
 {
-    std::cout << (bowModel == exponential ? "Exponential" : "Elasto-Plastic") << std::endl;
+//    std::cout << (bowModel == exponential ? "Exponential" : "Elasto-Plastic") << std::endl;
     if (ModifierKeys::getCurrentModifiers() == ModifierKeys::leftButtonModifier)
     {
         _Vb = 0.1;
@@ -530,7 +559,7 @@ void ViolinString::mouseDrag(const MouseEvent &e)
     
     else if (cpMoveIdx == -1)
     {
-        float bowVelocity = e.y / (static_cast<double>(getHeight())) * maxVb;
+        float bowVelocity = (e.y - getHeight() * 0.5) / (static_cast<double>(getHeight())) * maxVb * 2;
         setVb (bowVelocity);
         
         float bowPositionX = e.x <= 0 ? 0 : (e.x < getWidth() ? e.x / static_cast<double>(getWidth()) : 1);
@@ -554,21 +583,21 @@ double ViolinString::linearInterpolation(double* uVec, int bp, double alph)
 
 double ViolinString::cubicInterpolation(double* uVec, int bp, double alph)
 {
-    double val1 = uVec[bp - 1] * (alph * (alph - 1) * (alph - 2)) / -6.0
-    + uVec[bp] * ((alph - 1) * (alph + 1) * (alph - 2)) / 2.0
-    + uVec[bp + 1] * (alph * (alph + 1) * (alph - 2)) / -2.0
-    + uVec[bp + 2] * (alph * (alph + 1) * (alph - 1)) / 6.0;
-    
+//    double val1 = uVec[bp - 1] * (alph * (alph - 1) * (alph - 2)) / -6.0
+//    + uVec[bp] * ((alph - 1) * (alph + 1) * (alph - 2)) / 2.0
+//    + uVec[bp + 1] * (alph * (alph + 1) * (alph - 2)) / -2.0
+//    + uVec[bp + 2] * (alph * (alph + 1) * (alph - 1)) / 6.0;
+//
     double val = 0;
-    if (bp > 3)
-        val = val + uVec[bp - 1] * (alph * (alph - 1) * (alph - 2)) / -6.0;
+    if (bp > simplySupported ? 2 : 3)
+        val = val + uVec[bp - 1] * (alph * (alph - 1) * (alph - 2)) * -oneOverSix;
     
-    val = val + uVec[bp] * ((alph - 1) * (alph + 1) * (alph - 2)) / 2.0;
+    val = val + uVec[bp] * ((alph - 1) * (alph + 1) * (alph - 2)) * 0.5;
     
-    if (bp < N - 3)
-        val = val + uVec[bp + 1] * (alph * (alph + 1) * (alph - 2)) / -2.0;
-    if (bp < N - 4)
-        val = val + uVec[bp + 2] * (alph * (alph + 1) * (alph - 1)) / 6.0;
+    if (bp < N - (simplySupported ? 2 : 3))
+        val = val + uVec[bp + 1] * (alph * (alph + 1) * (alph - 2)) * -0.5;
+    if (bp < N - (simplySupported ? 3 : 4))
+        val = val + uVec[bp + 2] * (alph * (alph + 1) * (alph - 1)) * oneOverSix;
 //    std::cout << val - val1 << std::endl;
     return val;
 }

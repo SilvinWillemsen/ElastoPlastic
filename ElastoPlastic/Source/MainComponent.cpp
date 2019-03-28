@@ -23,8 +23,8 @@ MainComponent::MainComponent() : minOut(-1.0), maxOut(1.0),
     forceSlider.addListener(this);
     forceSlider.setSliderStyle (Slider::RotaryVerticalDrag);
     
-    scaleGraphics.setRange (1.0, 10.0);
-    scaleGraphics.setValue (5.0);
+    scaleGraphics.setRange (0.01, 5.0);
+    scaleGraphics.setValue (1.0);
     addAndMakeVisible(scaleGraphics);
     scaleGraphics.addListener(this);
     scaleGraphics.setSliderStyle (Slider::RotaryVerticalDrag);
@@ -60,9 +60,10 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     fs = sampleRate;
     bufferSize = samplesPerBlockExpected;
     
-    violinStrings.add (new ViolinString (110.0, fs, 0, elastoPlastic));
-//    violinStrings.add (new ViolinString (196.0, fs, 0, exponential));
-    float detail = 1000.0;
+    violinStrings.add (new ViolinString (196.0, fs, 0, elastoPlastic));
+    violinStrings.add (new ViolinString (196.0 * pow (2, 7.0 / 12.0), fs, 0, elastoPlastic));
+    violinStrings.add (new ViolinString (196.0 * pow (2, 14.0 / 12.0), fs, 0, elastoPlastic));
+    violinStrings.add (new ViolinString (196.0 * pow (2, 21.0 / 12.0), fs, 0, elastoPlastic));
     
     drawData(true);
     
@@ -130,7 +131,7 @@ void MainComponent::paint (Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
-    
+//    std::cout << violinStrings[0]->getStateAt(1) << std::endl;
     drawData();
 }
 
@@ -189,12 +190,15 @@ void MainComponent::hiResTimerCallback()
                 {
                     finger0X = x;
                     finger0Y = y;
-                    violinStrings[index]->setBow(state);
-                    Vb = clip (Vb, -maxVb, maxVb);
-                    Fn = clip (Fn, 0, maxFn);
-                    violinStrings[index]->setVb(Vb);
-                    violinStrings[index]->setFn(Fn);
-                    violinStrings[index]->setBowPos(x, y);
+                    for (int i = 0; i < fingerCount; ++i)
+                    {
+                        Vb = clip (Vb, -maxVb, maxVb);
+                        Fn = clip (Fn, 0, maxFn);
+                        violinStrings[i]->setVb (Vb);
+                        violinStrings[i]->setFn (Fn);
+                        violinStrings[i]->setBowPos (x, y);
+                        violinStrings[i]->setBow (state);
+                    }
                 }
 //                else if (fingerID > 0)
 //                {
@@ -211,7 +215,11 @@ void MainComponent::hiResTimerCallback()
             
             if (fingerCount == 0)
             {
-                violinStrings[index]->setBow(false);
+                for (auto violinString : violinStrings)
+                {
+                    violinString->setBow (false);
+                }
+//                std::cout << "fingerCount is false" << std::endl;
             }
         }
     }

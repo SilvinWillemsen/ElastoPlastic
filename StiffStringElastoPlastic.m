@@ -8,7 +8,7 @@ c = f0 * 2;     % Wave-Speed
 gamma = f0*2;     % Wave-Speed
 L = 1;
 k = 1/Fs;       % Time-step
-s0 = 0.1;       % Damping coefficients
+s0 = 1;       % Damping coefficients
 s1 = 0.005;
 
 E = 2e11;
@@ -99,7 +99,7 @@ f_fr1=0;                % initial friction force
 f_tot_r1=0;         % initial total force on resonator
 f_tot_b1=0;         % initial total force on bow
 
-VbInit = -0.1;
+VbInit = 0.1;
 a_z=[1,1/(2*Fs)];
 zPrev = 0;
 z = 0;
@@ -137,6 +137,7 @@ vRelSave = zeros(lengthSound, 1);
 zDotSave = zeros(lengthSound, 1);
 Fsave = zeros(lengthSound, 1);
 scalar = 0;
+hysteresis = true;
 for t = 1 : lengthSound
 %     if round(scalar * 1000)/1000 == 1
 if t < 5000
@@ -145,7 +146,7 @@ else
         scalar = 1;
 end
 %     else
-%         scalar = sin(10 * pi * t / Fs);
+%         scalar = sin(2 * pi * t / Fs);
 %     end
     
     Vb = VbInit * scalar;
@@ -236,6 +237,8 @@ end
                 
                 z = zPrev + k / 2 * zDotPrev + k / 2 * zdot;
                 Vrel = (-sig0 * z - sig1 * zdot - b) / (sig2 + 2/k + 2*s0);
+                zTest(t,1) = (-sig1 * zdot - (sig2 + 2/k + 2*s0) * Vrel - b) / sig0;
+%                 z - zTest(t)
                 i = i + 1;
             end
             F = sig0 * z + sig1 * zdot + sig2 * Vrel;
@@ -245,6 +248,7 @@ end
             z=0; f_fr=0; v=vs;
         end
         excitation = k^2*J*F;
+%         excitation = 0;
         vRelSave(t) = Vrel;
     elseif bowModel == "hyperbolic"
         v = 1/k * (I' * u - I' * uPrev);
@@ -258,88 +262,107 @@ end
     zPrev = z;
     zDotPrev = zdot;
     % Plot
-    if drawString == true && mod(t,5) == 0 && t > Fs / 2
+    if drawString == false && mod(t,1) == 0 && t > 3*Fs
         clf
-        subplot(2,1,1)
-%         cla
-        plot(uNext);
-        hold on;
-        ylim([-1e-5 1e-5])
-        scatter(repmat(floor(bp*N), 20, 1), [-1e-5:1e-6:1e-5-1e-6]+mod(bowVertPos/20,1e-6),'.')
-%         if Vb < 0
-%             annotation("textarrow", [bp bp], [0.85 0.8]);
-%         else
-%             annotation("textarrow", [bp bp], [0.8 0.85]);
-%         end
-        text(floor(bp*N) - 2, 0, "$V_B =$ " + num2str(Vb, 2), 'interpreter', 'latex', 'horizontalAlignment', 'right');
-        title("String displacement at sample " + num2str(t), 'interpreter', 'latex','Fontsize', 16)
-        
-        %% Steady State Curve
-        subplot(2,4,5)
-        plot(vRelVec, zssVec)
-        hold on;
-        zssVecVal = find (round(vRelVec * 1e3) == round(Vrel * 1e3));
-        if length(zssVecVal) == 1
-            zssVecPlotVal = zssVecVal;
-        end
-        scatter(round(Vrel * 1e3)*1e-3, zssVec(zssVecPlotVal));     
-        text(round(Vrel * 1e3)*1e-3, zssVec(zssVecPlotVal) - 1.5e-4, "$v =$ " + num2str(Vrel, 2), 'interpreter', 'latex', 'horizontalAlignment', 'center');
-        xlim([-0.5 0.5])
-%         title("$z$", 'interpreter', 'latex')
-        xlabel('$v$','interpreter', 'latex')
-        ylabel("$z_{ss}(v)$", 'interpreter', 'latex')
-        title('Steady-state curve $z_{ss}(v)$', 'interpreter', 'latex', 'Fontsize', 16)
-
-        %% Adhesion Map
-        subplot(2,4,6)
-        alphaPlot = zeros(length(zVec),1);
-        zssPlot = abs(zss);
-        for ii = 1:length(zVec)
-            if ((abs(zVec(ii))>z_ba) && (abs(zVec(ii))<zssPlot))
-                arg=pi*(zVec(ii)-sign(zVec(ii))*0.5*(zssPlot+z_ba))/(zssPlot-z_ba);
-                sinarg=sin(sign(zVec(ii))*arg);
-                alphaPlot(ii)=0.5*(1+sinarg);
-            elseif (abs(zVec(ii))>zssPlot)
-                alphaPlot(ii)=1;
+%         subplot(2,1,1)
+%         plot(uNext);
+%         hold on;
+%         ylim([-1e-5 1e-5])
+%         scatter(repmat(floor(bp*N), 20, 1), [-1e-5:1e-6:1e-5-1e-6]+mod(bowVertPos/20,1e-6),'.')
+% %         if Vb < 0
+% %             annotation("textarrow", [bp bp], [0.85 0.8]);
+% %         else
+% %             annotation("textarrow", [bp bp], [0.8 0.85]);
+% %         end
+%         text(floor(bp*N) - 2, 0, "$V_B =$ " + num2str(Vb, 2), 'interpreter', 'latex', 'horizontalAlignment', 'right');
+%         title("String displacement at sample " + num2str(t), 'interpreter', 'latex','Fontsize', 16)
+        if hysteresis == false
+            %% Steady State Curve
+            subplot(2,4,5)
+            plot(vRelVec, zssVec)
+            hold on;
+            zssVecVal = find (round(vRelVec * 1e3) == round(Vrel * 1e3));
+            if length(zssVecVal) == 1
+                zssVecPlotVal = zssVecVal;
             end
-        end
-        plot(zVec, alphaPlot);
-        text(zss + 5e-5, 0.5, '$z_{ss}(v)$', 'interpreter', 'latex', 'horizontalAlignment', 'center')
-%       
-        hold on;
-        plot([zss zss], [min(ylim) max(ylim)], '--');
-        alphaIdx = find(round(zVec*1e5) == floor(1e5*z));
-        scatter(floor(1e5*z)*1e-5, alphaPlot(alphaIdx));
-        text(floor(1e5*z)*1e-5+3e-5, alphaPlot(alphaIdx) - 0.05, '$z$', 'interpreter', 'latex', 'horizontalAlignment', 'center')
-%         title('$\alpha$','interpreter', 'latex', 'Fontsize', 18)
-        xlabel('$z$','interpreter', 'latex')
-        ylabel('$\alpha(v,z)$','interpreter', 'latex')
-        title('Adhesion map $\alpha(v,z)$', 'interpreter', 'latex', 'Fontsize', 16)
-        
-        %% Velocity of Mean Bristle Displacement
-        subplot(2,4,7)
-        plot(zDotSave(1:t))
-        xlabel('$n$ (samples)','interpreter', 'latex')
-        ylabel("$\dot z$", 'interpreter', 'latex')
-        title('Velocity of the mean bristle displacement', 'interpreter', 'latex', 'Fontsize', 16)
+            scatter(round(Vrel * 1e3)*1e-3, zssVec(zssVecPlotVal));     
+            text(round(Vrel * 1e3)*1e-3, zssVec(zssVecPlotVal) - 1.5e-4, "$v =$ " + num2str(Vrel, 2), 'interpreter', 'latex', 'horizontalAlignment', 'center');
+            xlim([-0.5 0.5])
+    %         title("$z$", 'interpreter', 'latex')
+            xlabel('$v$','interpreter', 'latex')
+            ylabel("$z_{ss}(v)$", 'interpreter', 'latex')
+            title('Steady-state curve $z_{ss}(v)$', 'interpreter', 'latex', 'Fontsize', 16)
 
-        %% Mean Bristle Displacement
-        subplot(2,4,8)
-%         plot(zSave(1:t))
-% %         title("$z$", 'interpreter', 'latex')
-%         xlabel('$n$ (samples)','interpreter', 'latex')
-%         ylabel("$z$", 'interpreter', 'latex')
-%         title('Mean bristle displacement $z$', 'interpreter', 'latex', 'Fontsize', 16)
-     numDots = 100;   
-        mat = [[1:-1/numDots:1/numDots]', [1:-1/numDots:1/numDots]', [1:-1/numDots:1/numDots]'];
-        if t > numDots
-            scatter(vRelSave(t-numDots+1:t), Fsave(t-numDots+1:t), 40, mat);
-%         xlim ([-0.5 0.5]);
+            %% Adhesion Map
+            subplot(2,4,6)
+            alphaPlot = zeros(length(zVec),1);
+            zssPlot = abs(zss);
+            for ii = 1:length(zVec)
+                if ((abs(zVec(ii))>z_ba) && (abs(zVec(ii))<zssPlot))
+                    arg=pi*(zVec(ii)-sign(zVec(ii))*0.5*(zssPlot+z_ba))/(zssPlot-z_ba);
+                    sinarg=sin(sign(zVec(ii))*arg);
+                    alphaPlot(ii)=0.5*(1+sinarg);
+                elseif (abs(zVec(ii))>zssPlot)
+                    alphaPlot(ii)=1;
+                end
+            end
+            plot(zVec, alphaPlot);
+            text(zss + 5e-5, 0.5, '$z_{ss}(v)$', 'interpreter', 'latex', 'horizontalAlignment', 'center')
+
+            hold on;
+            plot([zss zss], [min(ylim) max(ylim)], '--');
+            alphaIdx = find(round(zVec*1e5) == floor(1e5*z));
+            if length(alphaIdx) == 1
+                scatter(floor(1e5*z)*1e-5, alphaPlot(alphaIdx));
+                text(floor(1e5*z)*1e-5+3e-5, alphaPlot(alphaIdx) - 0.05, '$z$', 'interpreter', 'latex', 'horizontalAlignment', 'center');
+            end
+            %         title('$\alpha$','interpreter', 'latex', 'Fontsize', 18)
+            xlabel('$z$','interpreter', 'latex')
+            ylabel('$\alpha(v,z)$','interpreter', 'latex')
+            title('Adhesion map $\alpha(v,z)$', 'interpreter', 'latex', 'Fontsize', 16)
+
+            %% Velocity of Mean Bristle Displacement
+            subplot(2,4,7)
+            plot(zDotSave(1:t))
+            xlabel('$n$ (samples)','interpreter', 'latex')
+            ylabel("$\dot z$", 'interpreter', 'latex')
+            title('Velocity of the mean bristle displacement', 'interpreter', 'latex', 'Fontsize', 16)
+
+            %% Mean Bristle Displacement
+            subplot(2,4,8)
+            plot(zSave(1:t))
+            title("$z$", 'interpreter', 'latex')
+            xlabel('$n$ (samples)','interpreter', 'latex')
+            ylabel("$z$", 'interpreter', 'latex')
+            title('Mean bristle displacement $z$', 'interpreter', 'latex', 'Fontsize', 16)
+        else
+            % subplot(2,1,2)
+            numDots = 1000;   
+            mat = [[1:-1/numDots:1/numDots]', [1:-1/numDots:1/numDots]', [1:-1/numDots:1/numDots]'];
+            vec = t-numDots + 1 : t;
+            cla;
+            if t > numDots
+               plot(vRelSave(t-numDots+1:t), Fsave(t-numDots+1:t), 'k', 'Linewidth', 2);
+    %            hold on;
+    %            scatter(vRelSave(t-numDots+1:t), Fsave(t-numDots+1:t), 40, mat);
+
+
+    %             for i = 1:length(vec)-1
+    %                 
+    %                 line(vRelSave(vec(i):vec(i+1)),...
+    %                      Fsave(vec(i):vec(i+1)),...
+    %                      'color', mat(i,:));
+    %             end
+    %         xlim ([-0.5 0.5]);
+            end
+            ylabel("$f(v,z)$", 'interpreter', 'latex')
+            xlabel("$v$", 'interpreter', 'latex')
+            title('Force function $f(v,z)$ against relative velocity', 'interpreter', 'latex', 'Fontsize', 16)
+    %         xlim([-0.25 0.05])
+    %         ylim([-0.2 1])
+            set(gca, 'Fontsize', 20)
+            grid on;
         end
-        ylabel("$f(v,z)$", 'interpreter', 'latex')
-        ylabel("$v$", 'interpreter', 'latex')
-        title('Force function $f(v,z)$ against relative velocity', 'interpreter', 'latex', 'Fontsize', 16)
-        
         drawnow;
     end
 %     alphaSave(t) = alpha;
