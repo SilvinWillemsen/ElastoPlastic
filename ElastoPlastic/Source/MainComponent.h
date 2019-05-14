@@ -57,7 +57,6 @@ private:
     float minOut;
     float maxOut;
     
-    int numStrings;
     OwnedArray<ViolinString> violinStrings;
     OwnedArray<Sensel> sensels;
     OwnedArray<DataVisual> dataVisuals;
@@ -69,11 +68,20 @@ private:
 
     Slider forceSlider;
     Slider scaleGraphics;
+    Slider noiseFactor;
+    
     ToggleButton toggleGraphics;
+    ToggleButton overrideNoiseButton;
     Label forceLabel;
     Label scaleLabel;
+    Label noiseLabel;
     bool initGraphics = true;
     
     int amountOfSensels = 1;
+    
+    bool showData = true;
+    bool showControls = true;
+    int numStrings = 1;
+    bool overrideNoise = false;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

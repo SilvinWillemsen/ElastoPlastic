@@ -120,12 +120,15 @@ public:
     double getZ() { return z; };
     void scaleVisuals (double val) { visualScale = val; };
     
+    void setNoise (double val) { sig3 = val; };
+    
 private:
-    double fs, freq, c, k, kHalf, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
+    double fs, freq, c, L, r, csA, rho, k, kHalf, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
     double velCalcDiv = 0; //Velocity calculation division
     //Elasto plastic vars
-    double z, zPrev, zDot, zDotNext, zDotPrev, fnl, z_ba, Fn, fC, fS, sig0, sig1, sig2, oOSig0, E2, oOstrvSq, zss, zssNotAbs, oOZss, oOZssMinZba, dz_ss, strv, espon, alpha, dalpha_v, dalpha_z, d_fnlv, d_fnlz, d_fnl, arg, mus, mud, K1;
+    double z, zPrev, zDot, zDotNext, zDotPrev, scaleFact, fnl, z_ba, Fn, fC, fS, sig0, sig1, sig2, sig3, sig3w, oOSig0, E2, oOstrvSq, zss, zssNotAbs, oOZss, oOZssMinZba, dz_ss, strv, espon, alpha, dalpha_v, dalpha_z, d_fnlv, d_fnlz, d_fnl, arg, mus, mud, K1;
     double ff = 0.7;
+    Random rand;
     atomic<double> lambdaSq;
     atomic<double> _Vb, _Fb, _bpX, _bpY;
     

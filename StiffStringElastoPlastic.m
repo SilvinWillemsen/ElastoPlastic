@@ -2,7 +2,9 @@ clear all;
 close all;
 clc;
 
+drawString = true;
 Fs = 44100;     % Sampling rate
+drawStart = 0;
 f0 = 196.00;    % G3
 c = f0 * 2;     % Wave-Speed
 gamma = f0*2;     % Wave-Speed
@@ -13,11 +15,11 @@ s1 = 0.005;
 
 E = 2e11;
 r = 0.0005; 
-A = r^2*pi;
+A = r^2 * pi;
 I = pi*r^4 / 4;
 rho = 7850;
 kappa = sqrt(E*I/(rho*A));
-kappa = 2;
+% kappa = 2;
 % B = 0.0001; %inharmonicity coefficient
 % kappa = sqrt(B)*(gamma/pi); % Stiffness Factor     
 % 
@@ -58,20 +60,19 @@ BM = sqrt(2*a)*exp(1/2);
 
 % User variables
 Vb = -0.2;               % Bowing speed
-Fb = 50;                % Bowing force / total mass of bow
+Fb = 5;                % Bowing force / total mass of string
 pickup = floor(N/3);    % Pickup position
 
 % Initialise variables for Newton Raphson 
 tol = 1e-4;
 qSave = zeros (lengthSound, 1);
 qPrev = 0;
-
-drawString = true;
             
-bp = 0.3; 
+bp = 1/4; 
 I = zeros(N,1);
 I(floor(bp * N)) = 1;
 J = 1/h * I;
+
 %%%% the Contact Force (be with you) %%%%%%%%%
 mus=0.8;               % static friction coeff
 mud=0.3;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
@@ -85,7 +86,8 @@ ssparam=[fc,fs,strv];
   
 sig0=1e4;           % bristle stiffness
 sig1=.1*sqrt(sig0);   % bristle damping
-sig2=0.4;            % viscous friction term 
+sig2=0.4;            % viscous friction term
+sig3Init = 0;
 % sig0=4000;           % bristle stiffness
 % sig1=0;   % bristle damping
 % sig2=0.25;            % viscous friction term 
@@ -121,7 +123,7 @@ excitation = 0;
 figure('Renderer', 'painters', 'Position', [100 100 1400 400])
 VbPrev = 0;
 bowVertPosPrev = 0;
-K1 = -sig1 / ((sig2 + 2/k + 2*s0) * h);
+% K1 = -sig1 / ((sig2 + 2/k + 2*s0) * h);
 
 zVec = -1e-3:1e-5:1e-3;
 vRelVec = -0.5:0.001:0.5;
@@ -136,24 +138,39 @@ zSave = zeros(lengthSound, 1);
 vRelSave = zeros(lengthSound, 1);
 zDotSave = zeros(lengthSound, 1);
 Fsave = zeros(lengthSound, 1);
+iSave = zeros(lengthSound, 1);
 scalar = 0;
 hysteresis = true;
+w = (2 * rand(lengthSound,1) - 1);
+% w = zeros(lengthSound,1);
+% wNoise = awgn(w,10);
+% plot(wNoise);
+zssVecPlotVal = 1;
+figure('Renderer', 'painters', 'Position', [100 100 900 500])
 for t = 1 : lengthSound
 %     if round(scalar * 1000)/1000 == 1
-if t < 5000
-    scalar = 1/5000 * t;
-else
+    if t < 5000
+        scalar = 1/5000 * t;
+    else
         scalar = 1;
-end
+    end
+% if t < drawStart
+    sig3(t) = sig3Init;
+% elseif t >= drawStart && t <= drawStart + Fs
+%     sig3(t) = sig3Init * (1 + cos(pi * (t - (drawStart)) / Fs)) * 0.5;
+% else
+%     sig3(t) = 0;
+% end
+    
 %     else
 %         scalar = sin(2 * pi * t / Fs);
 %     end
     
     Vb = VbInit * scalar;
-    Fn = abs(FnInit * scalar);
-    if Fn == 0
-        Fn = 0.001;
-    end
+    Fn = abs(FnInit * 1);
+%     if Fn == 0
+%         Fn = 0.001;
+%     end
     fc=mud*Fn;             % coulomb force
     fs=mus*Fn;             % stiction force
     z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
@@ -162,7 +179,7 @@ end
     VbPrev = Vb;
     bowVertPosPrev = bowVertPos;
     if bowModel == "simple"
-        b = 2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev;
+        b = (2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev);
         eps = 1;
         i = 0;
         while eps>tol
@@ -182,7 +199,7 @@ end
     elseif bowModel == "elastoPlastic"
         
         % calculate pre-computable part of the FDS
-        b = 2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev;
+        b = (2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev);
         if fc>0
             eps = 1;
             i = 0;
@@ -211,7 +228,7 @@ end
                 fnl=Vrel*(1-alpha*z/zss);
                 %% compute derivatives
                 
-                %dz_ss/dv
+                % dz_ss/dv
                 dz_ss = (-2*Vrel*sign(Vrel) / (strv^2*sig0))*(fs-fc)*espon;
                 
                 dalpha_v=0; %d(alpha)/dv 
@@ -228,7 +245,7 @@ end
                 d_fnlv = 1-z * ((alpha +Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
                 d_fnlz = -Vrel/zss*(z*dalpha_z +alpha);
 %                 K1 = -k^2 / (h * (1 + s0 * k));
-                K1 = -sig1 / (sig2 + 2/k + 2 * sig0);
+                K1 = -sig1 / (sig2 + 2/k + 2*s0);
                 d_fnl = K1 * d_fnlv + d_fnlz * k / 2;
                 
                 zdotNext = zdot - (fnl - zdot)/(d_fnl - 1);
@@ -236,12 +253,14 @@ end
                 zdot = zdotNext;
                 
                 z = zPrev + k / 2 * zDotPrev + k / 2 * zdot;
-                Vrel = (-sig0 * z - sig1 * zdot - b) / (sig2 + 2/k + 2*s0);
-                zTest(t,1) = (-sig1 * zdot - (sig2 + 2/k + 2*s0) * Vrel - b) / sig0;
+                Vrel = (-sig0 * z - sig1 * zdot - sig3(t) * w(t) - b) / (sig2 + 2/k + 2*s0);
+%                 zTest(t,1) = (-sig1 * zdot - (sig2 + (rho * A) * (2/k + 2*s0)) * Vrel - sig3(t) * w(t) - (rho * A) * b) / sig0;
 %                 z - zTest(t)
                 i = i + 1;
+               
             end
-            F = sig0 * z + sig1 * zdot + sig2 * Vrel;
+            iSave(t) = i;
+            F = (sig0 * z + sig1 * zdot + sig2 * Vrel + sig3(t) * w(t));
             Fsave(t) = F;
         else 
             zdot=0; err=0; count=0;
@@ -262,20 +281,20 @@ end
     zPrev = z;
     zDotPrev = zdot;
     % Plot
-    if drawString == false && mod(t,1) == 0 && t > 3*Fs
+    if drawString == true && mod(t,1000) == 0 && t > drawStart - 1000
         clf
-%         subplot(2,1,1)
-%         plot(uNext);
-%         hold on;
+        subplot(2,1,1)
+        plot(uNext);
+        hold on;
 %         ylim([-1e-5 1e-5])
-%         scatter(repmat(floor(bp*N), 20, 1), [-1e-5:1e-6:1e-5-1e-6]+mod(bowVertPos/20,1e-6),'.')
-% %         if Vb < 0
-% %             annotation("textarrow", [bp bp], [0.85 0.8]);
-% %         else
-% %             annotation("textarrow", [bp bp], [0.8 0.85]);
-% %         end
-%         text(floor(bp*N) - 2, 0, "$V_B =$ " + num2str(Vb, 2), 'interpreter', 'latex', 'horizontalAlignment', 'right');
-%         title("String displacement at sample " + num2str(t), 'interpreter', 'latex','Fontsize', 16)
+        scatter(repmat(floor(bp*N), 20, 1), [-1e-5:1e-6:1e-5-1e-6]+mod(bowVertPos/20,1e-6),'.')
+%         if Vb < 0
+%             annotation("textarrow", [bp bp], [0.85 0.8]);
+%         else
+%             annotation("textarrow", [bp bp], [0.8 0.85]);
+%         end
+        text(floor(bp*N) - 2, 0, "$V_B =$ " + num2str(Vb, 2), 'interpreter', 'latex', 'horizontalAlignment', 'right');
+        title("String displacement at sample " + num2str(t), 'interpreter', 'latex','Fontsize', 16)
         if hysteresis == false
             %% Steady State Curve
             subplot(2,4,5)
@@ -336,15 +355,15 @@ end
             ylabel("$z$", 'interpreter', 'latex')
             title('Mean bristle displacement $z$', 'interpreter', 'latex', 'Fontsize', 16)
         else
-            % subplot(2,1,2)
-            numDots = 1000;   
+            subplot(2,1,2)
+            numDots = 500;   
             mat = [[1:-1/numDots:1/numDots]', [1:-1/numDots:1/numDots]', [1:-1/numDots:1/numDots]'];
             vec = t-numDots + 1 : t;
             cla;
             if t > numDots
-               plot(vRelSave(t-numDots+1:t), Fsave(t-numDots+1:t), 'k', 'Linewidth', 2);
+%                plot(vRelSave(t-numDots+1:t), Fsave(t-numDots+1:t), 'k', 'Linewidth', 2);
     %            hold on;
-    %            scatter(vRelSave(t-numDots+1:t), Fsave(t-numDots+1:t), 40, mat);
+               scatter(vRelSave(t-numDots+1:t), Fsave(t-numDots+1:t), 40, mat);
 
 
     %             for i = 1:length(vec)-1
@@ -358,9 +377,10 @@ end
             ylabel("$f(v,z)$", 'interpreter', 'latex')
             xlabel("$v$", 'interpreter', 'latex')
             title('Force function $f(v,z)$ against relative velocity', 'interpreter', 'latex', 'Fontsize', 16)
-    %         xlim([-0.25 0.05])
-    %         ylim([-0.2 1])
+%             xlim([-0.25 0.05])
+%             ylim([-0.2 1])
             set(gca, 'Fontsize', 20)
+%             set(gca, 'Position', [0.08 0.11 0.89 0.82])
             grid on;
         end
         drawnow;

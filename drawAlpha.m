@@ -27,6 +27,8 @@ end
 
 z = -0.00015:0.0000001:0.00015;
 alphaVar=zeros(3001,1);
+zssPrev = zss;
+zss = abs(zss);
 for i = 1:3001
 %     if (sign(z(i))==sign(Vrel(i)))
         if ((abs(z(i))>z_ba) && (abs(z(i))<zss(i)))
@@ -38,6 +40,7 @@ for i = 1:3001
         end
 %     end
 end
+zss = zssPrev;
 
 % numSamps = length(z);
 % alphaVar=zeros(numSamps,1);
@@ -71,12 +74,12 @@ end
 for i = 0:0.1:1
     plot([min(xlim) max(xlim)], [i i], 'Linewidth', 2, 'color', [0.6 0.6 0.6]);
 end
-fontsize = 18;
+fontsize = 16;
 xNames = {'-$z_{ss}(v)$', '-$z_{ba}$', '$0$', '$z_{ba}$', '$z_{ss}(v)$'};
 text(locations, repmat(-0.11, 5, 1), xNames, 'horizontalAlignment', 'center', 'Fontsize', 18, 'interpreter', 'latex')
-text(0, 0.85, '$|z|<z_{ba}$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center')
-text((z_ba+zss(1)) / 2, 0.85, '$z_{ba}<|z|<z_{ss}(v)$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center', 'rotation', -90)
-text((zss(1) + 1.5e-4) / 2, 0.85, '$|z|>z_{ss}(v)$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center')
+text(0, 0.85, '$|z|\leq z_{ba}$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center')
+text((z_ba+zss(1)) / 2, 0.85, '$z_{ba}<|z|<|z_{ss}(v)|$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center', 'rotation', -90)
+text((zss(1) + 1.5e-4) / 2, 0.85, '$|z|\geq|z_{ss}(v)|$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center')
 
 set(gca, 'Fontsize', 15, 'TickLabelInterpreter', 'latex')
 text(0, -0.15, '$z$','interpreter', 'latex', 'Fontsize', 20, 'horizontalAlignment', 'center')
@@ -87,7 +90,7 @@ xticks([])
 %%DRAW VERTICAL GRIDLINES
 % scatter([-z_ba; z_ba; -zss(1); zss(1)], [0; 0; 1; 1], 50, 'circle')
 
-set(gca, 'Position', [0.07 0.09 0.92 0.84])
+set(gca, 'Position', [0.08 0.09 0.91 0.84])
 
 patch([min(xlim) max(xlim) max(xlim) min(xlim)], [max(ylim) max(ylim) min(ylim) min(ylim)], [0 0 0], 'FaceColor', 'none', 'EdgeColor', 'black', 'LineWidth', 2);
 % grid on;

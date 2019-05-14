@@ -11,32 +11,46 @@
 //==============================================================================
 MainComponent::MainComponent() : minOut(-1.0), maxOut(1.0),
                                  forceSlider (Slider::RotaryVerticalDrag, Slider::TextBoxBelow),
-                                 scaleGraphics (Slider::RotaryVerticalDrag, Slider::TextBoxBelow)
+                                 scaleGraphics (Slider::RotaryVerticalDrag, Slider::TextBoxBelow),
+                                 noiseFactor (Slider::RotaryVerticalDrag, Slider::TextBoxBelow)
 {
     // Make sure you set the size of the component after
     // you add any child components.
     // specify the number of input and output channels that we want to open
     setAudioChannels (0, 2);
     forceSlider.setRange (0.0, 100.0);
-    forceSlider.setValue (1.0);
-    addAndMakeVisible(forceSlider);
-    forceSlider.addListener(this);
-    forceSlider.setSliderStyle (Slider::RotaryVerticalDrag);
+    forceSlider.setValue (50.0);
+    addAndMakeVisible (forceSlider);
+    forceSlider.addListener (this);
     
     scaleGraphics.setRange (0.01, 5.0);
     scaleGraphics.setValue (1.0);
-    addAndMakeVisible(scaleGraphics);
-    scaleGraphics.addListener(this);
-    scaleGraphics.setSliderStyle (Slider::RotaryVerticalDrag);
+    addAndMakeVisible (scaleGraphics);
+    scaleGraphics.addListener (this);
     
+    noiseFactor.setRange (0.0, 5.0);
+    noiseFactor.setValue (1.0);
+    addAndMakeVisible (noiseFactor);
+    noiseFactor.addListener (this);
+    
+    noiseLabel.setText ("Noise", dontSendNotification);
+    addAndMakeVisible (noiseLabel);
+
     forceLabel.setText ("Fn Mouse", dontSendNotification);
     addAndMakeVisible (forceLabel);
+    
     scaleLabel.setText ("Scale", dontSendNotification);
     addAndMakeVisible (scaleLabel);
-    toggleGraphics.setButtonText("Toggle Graphics");
-    addAndMakeVisible(toggleGraphics);
-    toggleGraphics.addListener(this);
-    toggleGraphics.setToggleState(initGraphics, sendNotification);
+    
+    toggleGraphics.setButtonText ("Toggle Graphics");
+    addAndMakeVisible (toggleGraphics);
+    toggleGraphics.addListener (this);
+    toggleGraphics.setToggleState (initGraphics, sendNotification);
+    
+    overrideNoiseButton.setButtonText ("Override Noisecontrol");
+    addAndMakeVisible (overrideNoiseButton);
+    overrideNoiseButton.addListener (this);
+    overrideNoiseButton.setToggleState (overrideNoise, sendNotification);
 }
 
 MainComponent::~MainComponent()
@@ -60,18 +74,23 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     fs = sampleRate;
     bufferSize = samplesPerBlockExpected;
     
+//    for (int i = 0; i < numStrings; ++i)
+//    {
+//        violinStrings.add (new ViolinString (196.0 * pow (2, (7.0 * i) / 12.0), fs, 0, elastoPlastic));
+//        violinStrings.add (new ViolinString (196.0, fs, 0, elastoPlastic));
+//    }
+//    violinStrings.add (new ViolinString (196.0, fs, 0, elastoPlastic));
+//    violinStrings.add (new ViolinString (196.0, fs, 0, exponential));
     violinStrings.add (new ViolinString (196.0, fs, 0, elastoPlastic));
-    violinStrings.add (new ViolinString (196.0 * pow (2, 7.0 / 12.0), fs, 0, elastoPlastic));
-    violinStrings.add (new ViolinString (196.0 * pow (2, 14.0 / 12.0), fs, 0, elastoPlastic));
-    violinStrings.add (new ViolinString (196.0 * pow (2, 21.0 / 12.0), fs, 0, elastoPlastic));
     
-    drawData(true);
+    if (showData)
+        drawData(true);
     
     setSize (appWidth, appHeight);
     
     if (toggleGraphics.getToggleStateValue() == true)
     {
-        Timer::startTimerHz (100);
+        Timer::startTimerHz (15);
     }
     
     for (int i = 0; i < amountOfSensels; ++i)
@@ -89,7 +108,8 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
         addAndMakeVisible (violinString);
         std::cout << (violinString->getModel() == exponential ? "Exponential" : "ElastoPlastic") << std::endl;
     }
-    dataVisuals[0]->setDataPointX (violinStrings[0]->getVb());
+    if (showData)
+        dataVisuals[0]->setDataPointX (violinStrings[0]->getVb());
 }
 
 void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
@@ -132,7 +152,8 @@ void MainComponent::paint (Graphics& g)
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
 //    std::cout << violinStrings[0]->getStateAt(1) << std::endl;
-    drawData();
+    if (showData)
+        drawData();
 }
 
 void MainComponent::resized()
@@ -142,7 +163,24 @@ void MainComponent::resized()
     // update their positions.
     
     Rectangle<int> totalArea = getLocalBounds();
-    Rectangle<int> controlsRect = totalArea.removeFromRight(controlsWidth);
+
+    if (showControls)
+    {
+        Rectangle<int> controlsRect = totalArea.removeFromRight(controlsWidth);
+        forceLabel.setBounds (controlsRect.removeFromTop(30));
+        forceSlider.setBounds (controlsRect.removeFromTop(controlsWidth * 0.8));
+        
+        controlsRect.removeFromTop(20);
+        scaleLabel.setBounds (controlsRect.removeFromTop(30));
+        scaleGraphics.setBounds (controlsRect.removeFromTop (controlsWidth * 0.8));
+        
+        controlsRect.removeFromTop(20);
+        noiseLabel.setBounds (controlsRect.removeFromTop(30));
+        noiseFactor.setBounds (controlsRect.removeFromTop (controlsWidth * 0.8));
+    
+        overrideNoiseButton.setBounds (controlsRect.removeFromTop(50));
+        toggleGraphics.setBounds (controlsRect.removeFromTop(50));
+    }
     
     int i = 0;
     int div = appHeight / violinStrings.size();
@@ -151,22 +189,20 @@ void MainComponent::resized()
         violinString->setBounds (totalArea.removeFromTop(div));
         ++i;
     }
-    forceLabel.setBounds(controlsRect.removeFromTop(30));
-    forceSlider.setBounds (controlsRect.removeFromTop(controlsWidth * 0.8));
-    controlsRect.removeFromTop(20);
-    scaleLabel.setBounds(controlsRect.removeFromTop(30));
-    scaleGraphics.setBounds (controlsRect.removeFromTop (controlsWidth * 0.8));
-    toggleGraphics.setBounds (controlsRect.removeFromTop(100));
     
     int horSizeData = 300;
-    dataVisuals[0]->setBounds (0, 0, horSizeData, 200);
-    dataVisuals[1]->setBounds (horSizeData, 0, horSizeData, 200);
+    
+    if (showData)
+    {
+        dataVisuals[0]->setBounds (0, 0, horSizeData, 200);
+        dataVisuals[1]->setBounds (horSizeData, 0, horSizeData, 200);
+    }
 }
 
 void MainComponent::hiResTimerCallback()
 {
-    double maxVb = 0.45;
-    double maxFn = 1000;
+    double maxVb = 0.5;
+    double maxFn = 100;
     for (auto sensel : sensels)
     {
         double finger0X = 0;
@@ -176,12 +212,16 @@ void MainComponent::hiResTimerCallback()
             sensel->check();
             unsigned int fingerCount = sensel->contactAmount;
             int index = sensel->senselIndex;
+            for (auto violinString : violinStrings)
+            {
+                violinString->setBow (false);
+            }
             for (int f = 0; f < fingerCount; f++)
             {
                 bool state = sensel->fingers[f].state;
                 float x = sensel->fingers[f].x;
                 float y = sensel->fingers[f].y;
-                float Vb = sensel->fingers[f].delta_y / 5.0;
+                float Vb = sensel->fingers[f].delta_y * 0.2;
                 float Fn = sensel->fingers[f].force * 1000;
 //                std::cout << "Vb = " << Vb << " Fn = " << Fn << std::endl;
                 int fingerID = sensel->fingers[f].fingerID;
@@ -190,36 +230,37 @@ void MainComponent::hiResTimerCallback()
                 {
                     finger0X = x;
                     finger0Y = y;
-                    for (int i = 0; i < fingerCount; ++i)
+                    int numPlayedStrings = fingerCount;
+                    if (fingerCount > violinStrings.size())
+                        numPlayedStrings = violinStrings.size();
+                    
+                    for (int i = 0; i < numPlayedStrings; ++i)
                     {
                         Vb = clip (Vb, -maxVb, maxVb);
                         Fn = clip (Fn, 0, maxFn);
+                        if (!overrideNoise)
+                        {
+                            violinStrings[i]->setNoise (Fn * 0.05);
+                        }
+//                        if (abs(Vb) == maxVb)
+//                        std::cout << Vb <<std::endl;
                         violinStrings[i]->setVb (Vb);
                         violinStrings[i]->setFn (Fn);
                         violinStrings[i]->setBowPos (x, y);
                         violinStrings[i]->setBow (state);
                     }
                 }
-//                else if (fingerID > 0)
-//                {
-//                    //                    float dist = sqrt ((finger0X - x) * (finger0X - x) + (finger0Y - y) * (finger0Y - y));
-//                    float verDist = std::abs(finger0Y - y);
-//                    float horDist = std::abs(finger0X - x);
-//                    //                    std::cout << horDist << std::endl;
-//                    if (!(verDist <= 0.3 && horDist < 0.05))
-//                    {
-//                        violinStrings[index]->setFingerPosition(x);
-//                    }
-//                }
-            }
-            
-            if (fingerCount == 0)
-            {
-                for (auto violinString : violinStrings)
+                else if (fingerID > 0 && numStrings == 1)
                 {
-                    violinString->setBow (false);
+                    //                    float dist = sqrt ((finger0X - x) * (finger0X - x) + (finger0Y - y) * (finger0Y - y));
+                    float verDist = std::abs(finger0Y - y);
+                    float horDist = std::abs(finger0X - x);
+                    //                    std::cout << horDist << std::endl;
+                    if (!(verDist <= 0.3 && horDist < 0.05))
+                    {
+                        violinStrings[index]->setFingerPosition(x);
+                    }
                 }
-//                std::cout << "fingerCount is false" << std::endl;
             }
         }
     }
@@ -260,6 +301,14 @@ void MainComponent::sliderValueChanged (Slider* slider)
             violinString->scaleVisuals (slider->getValue());
         }
     }
+    
+    if (slider == &noiseFactor)
+    {
+        for (auto violinString : violinStrings)
+        {
+            violinString->setNoise (slider->getValue());
+        }
+    }
 }
 
 void MainComponent::buttonClicked (Button* button)
@@ -270,6 +319,15 @@ void MainComponent::buttonClicked (Button* button)
             Timer::stopTimer();
         else
             Timer::startTimerHz(60);
+    }
+    
+    if (button == &overrideNoiseButton)
+    {
+        overrideNoise = button->getToggleState();
+        if (overrideNoise)
+        {
+            sliderValueChanged (&noiseFactor);
+        }
     }
 }
 
