@@ -3,7 +3,9 @@ close all;
 %%%% the Contact Force (be with you) %%%%%%%%%
 mus=0.4;               % static friction coeff
 mud=0.2;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
-strv=1e-10;             % "stribeck" velocity
+strv=0.1;             % "stribeck" velocity
+
+plotzss = true;
 
 Fn = 5;
 
@@ -16,13 +18,30 @@ sig1=.1*sqrt(sig0);   % bristle damping
 sig2=0.4;            % viscous friction term 
 sigma=[sig0,sig1,sig2];
 
-z_ba=0.5*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
+z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
 
-Vrel = [0.2 * ones(3001,1)];
+
+if plotzss
+    Vrel = -1:0.001:1;
+else
+    Vrel = [0.2 * ones(3001,1)];
+end
 espon=exp(-(Vrel/strv).^2);         %exponential function
 zss=sign(Vrel).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
 if Vrel==0
   zss=fs/sig0;
+end
+
+if plotzss
+    figure('Renderer', 'painters', 'Position', [100 100 600 250])
+    set(gca, 'Position', [0.08 0.18 0.91 0.73])
+    plot(Vrel, zss, 'k', 'LineWidth', 2)
+    title("Steady-state function")
+    xlabel('$v$', 'interpreter', 'latex')
+    ylabel('$z_{ss}(v)$', 'interpreter', 'latex')
+    grid on;
+    set(gca, 'Fontsize', 16);
+    return;
 end
 
 z = -0.00015:0.0000001:0.00015;

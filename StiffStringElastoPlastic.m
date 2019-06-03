@@ -2,23 +2,23 @@ clear all;
 close all;
 clc;
 
-drawString = true;
+drawString = false;
 Fs = 44100;     % Sampling rate
 drawStart = 0;
 f0 = 196.00;    % G3
 c = f0 * 2;     % Wave-Speed
-gamma = f0*2;     % Wave-Speed
 L = 1;
 k = 1/Fs;       % Time-step
-s0 = 1;       % Damping coefficients
-s1 = 0.005;
+s0 = 0.1;       % Damping coefficients
+s1 = 0.05;
 
 E = 2e11;
 r = 0.0005; 
 A = r^2 * pi;
-I = pi*r^4 / 4;
+Iner = pi*r^4 / 4;
 rho = 7850;
-kappa = sqrt(E*I/(rho*A));
+T = c^2 * rho * A;  % Tension
+kappa = sqrt(E*Iner/(rho*A));
 % kappa = 2;
 % B = 0.0001; %inharmonicity coefficient
 % kappa = sqrt(B)*(gamma/pi); % Stiffness Factor     
@@ -32,24 +32,38 @@ kappa = sqrt(E*I/(rho*A));
 % lambdaSq = (gamma*k/h)^2; 
 % muSq = (k * kappa / h^2)^2;
 
-[B, C, N, h, bB, bC] = createStringElastoPlastic(c, kappa, L, s0, s1, k);
-
+% [B, C, N, h, bB, bC] = newCreateString (c, kappa, L, s0, s1, k);
+[B, C, N, h, Dxx, Dxxxx, s0, s1, bB, bC] = unscaledCreateStringNR(rho, A, T, E, Iner, L, s0, s1, k);
+% [B, C, N, h, bB, bC] = createStringElastoPlastic(c, kappa, L, s0, s1,
+% k);
+% [B, C, N, h, Dxx, Dxxxx] = newCreateString (c, kappa, L, s0, s1, k);
 % Initialise state vectors
 uPrev = zeros(N,1);
 u = zeros(N,1);
 uNext = zeros(N,1);  
 
 % Raised cosine
-% width = 10;
-% loc = 0.5;
-% startIdx = floor(floor(loc * N) - width / 2);
-% endIdx = floor(floor(loc * N) + width / 2);
-% 
+width = 6;
+loc = 0.25;
+startIdx = floor(floor(loc * N) - width / 2);
+endIdx = floor(floor(loc * N) + width / 2);
+
 % u(startIdx : endIdx) = (1 - cos(2 * pi * [0:width] / width)) / 2;
-% uPrev = u;
+uPrev = u;
 
 lengthSound = Fs * 5; % Set the length of the output
 out = zeros(lengthSound, 1);
+
+kinEnergy = zeros(lengthSound, 1);
+potEnergy = zeros(lengthSound, 1);
+totEnergy = zeros(lengthSound, 1);
+
+rOCkinEnergy = zeros(lengthSound, 1);
+rOCpotEnergy = zeros(lengthSound, 1);
+rOCdamp0StringEnergy = zeros(lengthSound, 1);
+rOCdamp1StringEnergy = zeros(lengthSound, 1);
+rOCbowStringEnergy = zeros(lengthSound, 1);
+rOCenergy = zeros(lengthSound, 1);
 
 % Boundary condition (clamped, ss, free)
 bc = "clamped";
@@ -68,7 +82,8 @@ tol = 1e-4;
 qSave = zeros (lengthSound, 1);
 qPrev = 0;
             
-bp = 1/4; 
+bp = 1/4;
+bP = floor(bp * N);
 I = zeros(N,1);
 I(floor(bp * N)) = 1;
 J = 1/h * I;
@@ -116,11 +131,11 @@ qSave = zeros (lengthSound, 1);
 qPrev = 0;
 zdot = 0;
 zDotPrev = 0;
-bowModel = "elastoPlastic";
+bowModel = "simple";
 Vrel = VbInit;
 VrelPrev = VbInit;
 excitation = 0;
-figure('Renderer', 'painters', 'Position', [100 100 1400 400])
+% figure('Renderer', 'painters', 'Position', [100 100 1400 400])
 VbPrev = 0;
 bowVertPosPrev = 0;
 % K1 = -sig1 / ((sig2 + 2/k + 2*s0) * h);
@@ -146,7 +161,9 @@ w = (2 * rand(lengthSound,1) - 1);
 % wNoise = awgn(w,10);
 % plot(wNoise);
 zssVecPlotVal = 1;
-figure('Renderer', 'painters', 'Position', [100 100 900 500])
+% figure('Renderer', 'painters', 'Position', [100 100 900 500])
+eVec = 2:N-1;
+vec = 3:N-2;
 for t = 1 : lengthSound
 %     if round(scalar * 1000)/1000 == 1
     if t < 5000
@@ -179,12 +196,12 @@ for t = 1 : lengthSound
     VbPrev = Vb;
     bowVertPosPrev = bowVertPos;
     if bowModel == "simple"
-        b = (2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev);
+        b = 2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev;
         eps = 1;
         i = 0;
         while eps>tol
-            q=qPrev-(Fb*BM*qPrev*exp(-a*qPrev^2)+2*qPrev/k+2*s0*qPrev+b)/...
-             (Fb*BM*(1-2*a*qPrev^2)*exp(-a*qPrev^2)+2/k+2*s0);
+            q=qPrev-(1/h * Fb*BM*qPrev*exp(-a*qPrev^2)+2*qPrev/k+2*s0*qPrev+b)/...
+             (1/h * Fb*BM*(1-2*a*qPrev^2)*exp(-a*qPrev^2)+2/k+2*s0);
             eps = abs(q-qPrev);
             qPrev = q;
             i = i + 1;
@@ -192,9 +209,8 @@ for t = 1 : lengthSound
                 disp('Nope');
             end
         end
-        F = Fb*BM*q*exp(-a*q^2);
-        Fsave(t) = F;
-        excitation = k^2*J*F;
+        qSave(t) = q;
+        excitation = J * Fb * sqrt(2 * a) * q * exp(-a*q^2 + 1/2);
         vRelSave(t) = q;
     elseif bowModel == "elastoPlastic"
         
@@ -266,22 +282,43 @@ for t = 1 : lengthSound
             zdot=0; err=0; count=0;
             z=0; f_fr=0; v=vs;
         end
-        excitation = k^2*J*F;
+        excitation = J*F;
 %         excitation = 0;
         vRelSave(t) = Vrel;
     elseif bowModel == "hyperbolic"
         v = 1/k * (I' * u - I' * uPrev);
         mu = (mud + (mus - mud) * VbInit/2) / (VbInit/2 + v - Vb);
-        excitation = k^2*J*Fn*mu;
+        excitation = J*Fn*mu;
+    else
+        excitation = 0;
     end
-    uNext = (B * u + C * uPrev) - excitation / (1 + s0 * k);
+    uNext = (B * u + C * uPrev) - excitation / (rho * A / k^2 + s0 / k);
     zSave(t) = z;
     
     zDotSave(t) = zdot;
     zPrev = z;
     zDotPrev = zdot;
-    % Plot
-    if drawString == true && mod(t,1000) == 0 && t > drawStart - 1000
+    
+    kinEnergy(t) = rho * A / 2 * h * sum((1/k * (u - uPrev)).^2);
+    potEnergy(t) = T / 2 * 1/h * sum((u(3:N) - u(2:N-1)) .* (uPrev(3:N) - uPrev(2:N-1)))...
+        + E * Iner / 2 * 1/h^3 * sum((u(eVec+1) - 2 * u(eVec) + u(eVec-1)) ...
+        .* (uPrev(eVec+1) - 2 * uPrev(eVec) + uPrev(eVec-1)));
+    totEnergy(t) = kinEnergy(t) + potEnergy(t);
+    
+    
+    % String
+    rOCkinEnergy(t) = h * rho * A / (2 * k^3) * sum((uNext - 2 * u + uPrev) .* (uNext - uPrev));
+    rOCpotEnergy(t) = h * T / (2*k*h^2) * sum((u(vec+1) - 2 * u(vec) + u(vec-1)).* (uNext(vec) - uPrev(vec))) ...
+         - h * E * Iner / (2 * k * h^4) * sum((u(vec+2) - 4 * u(vec+1) + 6 * u(vec) - 4 * u(vec-1) + u(vec-2)) .* (uNext(vec) - uPrev(vec)));%...
+    rOCdamp0StringEnergy(t) = -2 * s0 * h / (4 * k^2) * sum((uNext - uPrev).*(uNext - uPrev));
+    rOCdamp1StringEnergy(t) = 2 * h * s1 / (2 * k^2 * h^2) * sum((u(eVec+1) - 2 * u(eVec) + u(eVec-1) - uPrev(eVec+1) + 2 * uPrev(eVec) - uPrev(eVec-1)) .* (uNext(eVec) - uPrev(eVec)));
+    rOCbowStringEnergy(t) = -Fb * BM * q * exp(-a*q^2) .* (uNext(bP) - uPrev(bP)) / (2 * k);
+    rOCenergy(t) = rOCkinEnergy(t) - rOCpotEnergy(t) - rOCdamp0StringEnergy(t) - rOCdamp1StringEnergy(t) - rOCbowStringEnergy(t);
+    
+    
+    
+    % Plo
+    if drawString == true && mod(t,10) == 0 && t > drawStart - 1000
         clf
         subplot(2,1,1)
         plot(uNext);
@@ -383,6 +420,17 @@ for t = 1 : lengthSound
 %             set(gca, 'Position', [0.08 0.11 0.89 0.82])
             grid on;
         end
+        drawnow;
+    else
+        subplot(3,1,1);
+        plot(u);
+        subplot(3,1,2);
+        plot(totEnergy(10:t) / totEnergy(10) - 1);
+        subplot(3,1,3);
+        cla 
+        plot(rOCenergy(10:t));
+%         hold on; 
+%         plot(rOCbowStringEnergy(10:t))
         drawnow;
     end
 %     alphaSave(t) = alpha;
