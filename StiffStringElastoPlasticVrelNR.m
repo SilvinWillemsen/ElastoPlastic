@@ -17,8 +17,8 @@ f0 = 196.00;    % G3
 c = f0 * 2;     % Wave-Speed
 L = 1;          % String length
 k = 1/Fs;       % Time-step
-s0 = 0;       % Damping coefficients
-s1 = 0.0;
+s0 = 1;       % Damping coefficients
+s1 = 0.005;
 
 E = 2e11;       % Young's modulus
 r = 0.0005;     % Radius
@@ -75,7 +75,7 @@ if bowModel == "elastoPlastic"
     mud=0.3;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
     strv=1e-1;             % "stribeck" velocity
 
-    FnInit = 5;
+    FnInit = 0.5;
     Fn = FnInit;
     fc=mud*Fn;             % coulomb force
     fs=mus*Fn;             % stiction force          
@@ -96,14 +96,14 @@ if bowModel == "elastoPlastic"
     z = 0;
     tol = 1e-7;
     
-    zdot = VbInit;
-    zDotPrev = VbInit;
+    zdot = 0;
+    zDotPrev = 0;
     
     Vrel = -VbInit;
     VrelPrev = -VbInit;
     VbPrev = VbInit;
     
-    zVec = -z_ba*5:1e-7:z_ba*5;
+    zVec = -1e-4:1e-6:1e-4;
     vRelVec = -0.5:0.001:0.5;
     for ii = 1 : length(vRelVec)
         espon=exp(-(vRelVec(ii)/strv).^2);%exponential function
@@ -199,14 +199,12 @@ for t = 1 : lengthSound
                         arg=pi*(z-sign(z)*0.5*(zss+z_ba))/(zss-z_ba);
                         sinarg=sin(sign(z)*arg);
                         alpha=0.5*(1+sinarg);
-                    elseif (abs(z)>=zss)
+                    elseif (abs(z)>zss)
                         alpha=1;
                     end
                 end
-                alpha
                 zss = zssPrev;
-                zdot = Vrel * (1 - alpha * z / zss);
-                
+
                 %% compute derivatives
                 
                 % Derivative of the steady state function (dz_ss/dv)
@@ -216,42 +214,58 @@ for t = 1 : lengthSound
                 dalpha_z=0; %d(alpha)/dz
                 
                 zss = abs(zss); 
-                if ((sign(z)==sign(Vrel)) && (abs(z)>z_ba) && (abs(z)<zss))
+                if ((sign(z)==sign(Vrel)) && (abs(z)>z_ba) && (abs(z)<zss) )
                     cosarg=cos(sign(z)*arg);
                     dalpha_v=0.5*pi*cosarg*dz_ss*(z_ba-sign(z)*z)/(zss-z_ba)^2; 
                     dalpha_z=0.5*pi*cosarg*sign(z)/(zss-z_ba);
                 end
                 zss = zssPrev;
 
-%                 zdot = Vrel * (1-alpha * z / zss); %non-linear function estimate
-                dfnl_z = -Vrel/zss*(z*dalpha_z + alpha);
-                dfnl_v = 1-z * ((alpha +Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
+%                 % functions to perform newton raphson on
+%                 g1 = (2/k + 2 * s0) * Vrel + (sig0 * z + sig1 * zdot + sig2 * Vrel + sig3 * w(t)) / (rho * A * h) + b;
+%                 g2 = Vrel * (1 - alpha * z / zss) - zdot; %a^n (discrete zdot)
+%                 
+%                 % derivatives of the functions
+%                 dg1v = 2/k + 2 * s0 + sig2 / (rho * A * h);
+%                 dg1z = sig0 / (rho * A * h) + 2 * sig1 / (k * rho * A * h);
+%                 dg2v = 1-z * ((alpha +Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
+%                 dg2z = -Vrel/zss*(z*dalpha_z +alpha) - 2 / k;
+%                 
+%                 % create Jacobian matrix
+%                 Jac = [dg1v, dg1z; dg2v, dg2z];
+%                 
+%                 % perform vector NR
+%                 solut = [Vrel; z] - Jac \ [g1; g2];
 
-                % functions to perform newton raphson on
-                g1 = (2/k + 2 * s0 + sig2 / (rho * A * h)) * Vrel + (sig0 * z + sig1 * zdot ...
-                    + sig3 * w(t)) / (rho * A * h) + b;
-                g2 = zdot - 2/k * (z - zPrev) - zDotPrev; %a^n (discrete zdot, bilinear transform)
+                VrelPrev = Vrel;
+                g1 = (2/k + 2*s0 + sig2 / (rho*A*h)) * Vrel + (sig0 * z + sig1 * zdot + sig3 * w(t)) / (rho * A * h) + b;
+                dg1 = 2/k + 2*s0 + sig2 / (rho*A*h);
                 
-                % derivatives of the functions
-                dg1v = 2/k + 2 * s0 + sig1 / (rho * A * h) * dfnl_v + sig2 / (rho * A * h);
-                dg1z = sig0 / (rho * A * h) + sig1 / (rho * A * h) * dfnl_z;
-                dg2v = dfnl_v;
-                dg2z = dfnl_z - 2/k;
+                Vrel = Vrel - g1 / dg1;
+                eps = abs(VrelPrev-Vrel);
                 
-                % create Jacobian matrix
-                Jac = [dg1v, dg1z; dg2v, dg2z];
+                zdot = Vrel * (1 - alpha * z / zss);
                 
-                % perform vector NR
-                solut = [Vrel; z] - Jac \ [g1; g2];
-                VrelSave(t) = Vrel;
-                Vrel = solut(1);
-                z = solut(2);
+                %bilinear
+                z = k/2 * (zdot + zDotPrev) + zPrev;
+                %from g1 (should be the same as bilinear)
+                zTest = (- (2/k + 2*s0 + sig2 / (rho*A*h)) * Vrel - (sig1 * zdot + sig3 * w(t)) / (rho * A * h) - b) / (sig0 / (rho * A * h));
+                
+%                 Vrel = solut(1);
+%                 z = solut(2);
+                
 %                 zdotNext = 2/k * (z - zPrev) - zDotPrev;
-%                 zdotNextTest = 2/k * (z - zPrev) - zDotPrev;
-%                 zdotNext - zdotNextTest %should be 0
-                test = Vrel * (1 - alpha * z / zss);
-                eps = abs(test-zdot);
-
+%                 zdotNext = Vrel * (1-alpha * z / zss);
+                
+                
+%                 zdot = zdotNext;
+                
+                %what I used to do:
+%                 zdotNext = zdot - (fnl - zdot)/(d_fnl - 1);
+%                 z = zPrev + k / 2 * zDotPrev + k / 2 * zdot;
+%                 Vrel = ((-sig0 * z - sig1 * zdot - sig3(t) * w(t)) / scaleFact - b) / (sig2 / scaleFact + 2/k + 2*s0);
+%                 zTest(t,1) = (-sig1 * zdot - (sig2 + (rho * A) * (2/k + 2*s0)) * Vrel - sig3(t) * w(t) - (rho * A) * b) / sig0;
+%                 z - zTest(t)
                 i = i + 1;
                
             end
@@ -334,7 +348,7 @@ for t = 1 : lengthSound
                     arg=pi*(zVec(ii)-sign(zVec(ii))*0.5*(zssPlot+z_ba))/(zssPlot-z_ba);
                     sinarg=sin(sign(zVec(ii))*arg);
                     alphaPlot(ii)=0.5*(1+sinarg);
-                elseif (abs(zVec(ii))>=zssPlot)
+                elseif (abs(zVec(ii))>zssPlot)
                     alphaPlot(ii)=1;
                 end
             end
