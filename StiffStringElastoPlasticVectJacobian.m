@@ -206,6 +206,10 @@ for t = 1 : lengthSound
                 
                 zss = zssPrev;
                 
+                % functions to perform newton raphson on
+                g = (Vrel * (1 - alpha * z / zss)) * sig1 / (rho * A * h) + (2/k + 2 * s0 + sig2 / (rho * A * h)) * Vrel ...
+                    + (sig0 * z + sig3 * w(t)) / (rho * A * h) + b;
+                
                 %% compute derivatives
                 
                 % Derivative of the steady state function (dz_ss/dv)
@@ -221,11 +225,7 @@ for t = 1 : lengthSound
                     dalpha_z=0.5*pi*cosarg*sign(z)/(zss-z_ba);
                 end
                 zss = zssPrev;
-
-                % functions to perform newton raphson on
-                g = (Vrel * (1 - alpha * z / zss)) * sig1 / (rho * A * h) + (2/k + 2 * s0 + sig2 / (rho * A * h)) * Vrel ...
-                    + (sig0 * z + sig3 * w(t)) / (rho * A * h) + b;
-                % derivatives of the functions
+                
                 dfnl_z = -Vrel/zss*(z*dalpha_z + alpha);
                 dfnl_v = 1-z * ((alpha +Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
 
