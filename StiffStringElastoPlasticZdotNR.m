@@ -9,7 +9,7 @@ drawspeed = 100;
 drawEnergy = false;
 hysteresis = false;
 
-%% Choose bow model (elastoPlastic, simple, hyperbolic, cos (raised cosine))
+%% Choose bow model (elastoPlastic, simple, hyperbolic, cos (raised cosine)
 bowModel = "elastoPlastic";
 if bowModel ~= "elastoPlastic"
     drawString = false;
@@ -32,20 +32,21 @@ kappa = sqrt(E*Iner/(rho*A)); % Stiffness
 
 %% Create string
 [B, C, N, h, Dxx, Dxxxx, s0, s1, bB, bC] = unscaledCreateStringNR(rho, A, T, E, Iner, L, s0, s1, k);
+
 %% Initialise state vectors
 uPrev = zeros(N,1);
 u = zeros(N,1);
 uNext = zeros(N,1);
 
 %% Raised cosine
-% width = 6;
-% loc = 0.25;
-% startIdx = floor(floor(loc * N) - width / 2);
-% endIdx = floor(floor(loc * N) + width / 2);
-% if bowModel == "cos"
-%     u(startIdx : endIdx) = (1 - cos(2 * pi * [0:width] / width)) / 2;
-% end
-% uPrev = u;
+width = 6;
+loc = 0.25;
+startIdx = floor(floor(loc * N) - width / 2);
+endIdx = floor(floor(loc * N) + width / 2);
+if bowModel == "cos"
+    u(startIdx : endIdx) = (1 - cos(2 * pi * [0:width] / width)) / 2;
+end
+uPrev = u;
 
 lengthSound = Fs*2; % Set the length of the output
 out = zeros(lengthSound, 1);
@@ -62,8 +63,7 @@ rOCdamp1StringEnergy = zeros(lengthSound, 1);
 rOCbowStringEnergy = zeros(lengthSound, 1);
 rOCenergy = zeros(lengthSound, 1);
 
-pickup1 = floor(2*N/3);    % Pickup position
-pickup2 = floor(N/2); 
+pickup = floor(2*N/3);    % Pickup position
 
 bp = 1/4;
 bP = floor(bp * N);
@@ -77,7 +77,7 @@ if bowModel == "elastoPlastic"
     mud=0.3;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
     strv=1e-1;             % "stribeck" velocity
     
-    FnInit = 20;
+    FnInit = 10;
     Fn = FnInit;
     fc=mud*Fn;             % coulomb force
     fs=mus*Fn;             % stiction force
@@ -93,7 +93,7 @@ if bowModel == "elastoPlastic"
     
     z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!)
     
-    VbInit = 0.1;
+    VbInit = -0.1;
     zPrev = 0;
     z = 0;
     tol = 1e-7;
@@ -107,7 +107,7 @@ if bowModel == "elastoPlastic"
     VrelPrev = -VbInit;
     VbPrev = VbInit;
     
-    zVec = -z_ba*5:z_ba/10:z_ba*5;
+    zVec = -z_ba*5:1e-7:z_ba*5;
     vRelVec = -0.5:0.001:0.5;
     for ii = 1 : length(vRelVec)
         espon=exp(-(vRelVec(ii)/strv).^2);%exponential function
@@ -147,19 +147,9 @@ zssVecPlotVal = 1;
 % figure('Renderer', 'painters', 'Position', [100 100 900 500])
 eVec = 2:N-1;
 vec = 3:N-2;
-saveAlphaItFlag = false;
+
 for t = 1 : lengthSound
     %     Fn =  t / lengthSound * FnInit
-    if t == 76970
-%         saveAlphaItFlag = true;
-    end
-    if saveAlphaItFlag
-        alphaIt = [];
-        vrelIt = [];
-        zIt = [];
-        epsSave = [];
-    end
-    
     if bowModel == "elastoPlastic"
         fc=mud*Fn;             % coulomb force
         fs=mus*Fn;             % stiction force
@@ -217,17 +207,10 @@ for t = 1 : lengthSound
                         alpha=1;
                     end
                 end
-                
                 alphaSave(t) = alpha;
                 zss = zssPrev;
-                zdotPrevIt = zdot;
-                zdot= Vrel * (1 - alpha * z / zss);
                 
-%                 if eps < tol && i > 1
-%                     break;
-%                 end
-                anPrevIt = an;
-                an = 2/k * (z - zPrev) - anPrev;
+                fnl = Vrel * (1 - alpha * z / zss);
                 
                 %% compute derivatives
                 
@@ -247,82 +230,49 @@ for t = 1 : lengthSound
                 dfnl_z = -Vrel/zss*(z*dalpha_z + alpha);
                 dfnl_v = 1-z * ((alpha+Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
                 
-                % functions to perform newton raphson on
-                g1 = (2/k + 2 * s0 + sig2 / (rho * A * h)) * Vrel + (sig0 * z + sig1 * zdot ...
-                    + sig3 * w(t)) / (rho * A * h) + b;
-                g2 = zdot - an; %a^n (discrete zdot, bilinear transform)
+                K1 = -(2/k + 2*s0 + sig2/(rho * A * h)) / (sig1/(rho * A * h));
+                K2 = 2/k;
+                dfnl = K1 / 2 * dfnl_v + K2 * dfnl_z - 1;
                 
-                % derivatives of the functions
-                dg1v = 2/k + 2 * s0 + sig2 / (rho * A * h) + sig1 / (rho * A * h) * dfnl_v;
-                dg1z = sig0 / (rho * A * h) + sig1 / (rho * A * h) * dfnl_z;
-                dg2v = dfnl_v;
-                dg2z = dfnl_z - 2/k;
+                zdotPrevIt = zdot;
+                zdot = zdot - (fnl - zdot) / dfnl;
+                z = zPrev + k/2 * (zdot + zDotPrev);
+                Vrel = ((-sig0 * z - sig1 * zdot - sig3 * w(t)) / (rho * A * h) - b) / (2/k + 2 * s0 + sig2 / (rho * A * h));
                 
-                % create Jacobian matrix
-                Jac = [dg1v, dg1z; dg2v, dg2z];
-                
-                % perform vector NR
-                solut = [Vrel; z] - Jac \ [g1; g2];
-                
-                Vrel = solut(1);
-                z = solut(2);
-                
-                test = Vrel * (1 - alpha * z / zss);
-                eps = abs(zdot - test);
-                
-                if saveAlphaItFlag
-                    alphaIt(i+1) = alpha;
-                    vrelIt(i+1) = Vrel;
-                    zIt(i+1) = z;
-                    epsSave(i+1) = eps;
-                end
+                eps = abs(zdot-zdotPrevIt);
                 
                 i = i + 1;
                 
             end
-            
             iSave(t) = i;
-            espon=exp(-(Vrel/strv).^2);         %exponential function
-            zss=sign(Vrel).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
-            if Vrel==0
-                zss=fs/sig0;
+            if t > drawStart
+                
             end
-            zssSave(t) = zss;
-            % elasto-plastic function \alpha (v,z)
-            zssPrev = zss;
-            zss = abs(zss);
-            alpha = 0;
-
-            if (sign(z)==sign(Vrel))
-                if ((abs(z)>z_ba) && (abs(z)<zss))
-                    arg=pi*(z-sign(z)*0.5*(zss+z_ba))/(zss-z_ba);
-                    sinarg=sin(sign(z)*arg);
-                    alpha=0.5*(1+sinarg);
-                elseif (abs(z)>=zss)
-                    alpha=1;
-                end
-            end
-            alphaSave(t) = alpha;
-            zss = zssPrev;
-            zdotPrevIt = zdot;
-            zdot= Vrel * (1 - alpha * z / zss);
-            
-            if saveAlphaItFlag
-                subplot(4, 1, 1);
-                plot(alphaIt);
-                title("$\alpha$", 'interpreter', 'latex', 'Fontsize', 16)
-                subplot(4, 1, 2);
-                plot(vrelIt); 
-                title("$v_{rel}$", 'interpreter', 'latex', 'Fontsize', 16)
-                subplot(4, 1, 3);
-                plot(zIt);
-                title("$z$", 'interpreter', 'latex', 'Fontsize', 16)
-                subplot(4, 1, 4);
-                plot(epsSave);
-                title("$\epsilon$", 'interpreter', 'latex', 'Fontsize', 16)
-                drawnow;
-            end
-            
+%             espon=exp(-(Vrel/strv).^2);         %exponential function
+%             zss=sign(Vrel).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
+%             if Vrel==0
+%                 zss=fs/sig0;
+%             end
+%             zssSave(t) = zss;
+%             % elasto-plastic function \alpha (v,z)
+%             zssPrev = zss;
+%             zss = abs(zss);
+%             alpha = 0;
+% 
+%             if (sign(z)==sign(Vrel))
+%                 if ((abs(z)>z_ba) && (abs(z)<zss))
+%                     arg=pi*(z-sign(z)*0.5*(zss+z_ba))/(zss-z_ba);
+%                     sinarg=sin(sign(z)*arg);
+%                     alpha=0.5*(1+sinarg);
+%                 elseif (abs(z)>=zss)
+%                     alpha=1;
+%                 end
+%             end
+%             alphaSave(t) = alpha;
+%             zss = zssPrev;
+%             zdotPrevIt = zdot;
+%             zdot= Vrel * (1 - alpha * z / zss);
+%             zdotPrevIt - zdot
             F = (sig0 * z + sig1 * zdot + sig2 * Vrel + sig3 * w(t));
             Fsave(t) = F;
         else
@@ -371,12 +321,14 @@ for t = 1 : lengthSound
     if drawString == true && mod(t,drawspeed) == 0 && t > drawStart
         if drawEnergy == false 
             clf
-            subplot(2,1,1)
+            subplot(2,2,1)
             plot(uNext);
-            hold on;
+           
             %         scatter(repmat(floor(bp*N), 20, 1), [-1e-5:1e-6:1e-5-1e-6]+mod(bowVertPos/20,1e-6),'.');
             text(floor(bp*N) - 2, 0, "$V_B =$ " + num2str(Vb, 2), 'interpreter', 'latex', 'horizontalAlignment', 'right');
             title("String displacement at sample " + num2str(t), 'interpreter', 'latex','Fontsize', 16)
+            subplot(2,2,2)
+            plot(out(1:t))
             if hysteresis == false
                 %% Steady State Curve
                 subplot(2,4,5)
@@ -413,7 +365,6 @@ for t = 1 : lengthSound
                 text(zss + 5e-5, 0.5, '$z_{ss}(v)$', 'interpreter', 'latex', 'horizontalAlignment', 'center')
                 
                 hold on;
-                
                 plot([zss zss], [min(ylim) max(ylim)], '--');
                 alphaIdx = find(round(zVec*1e7) == floor(1e7*z));
                 if length(alphaIdx) == 1
@@ -424,6 +375,7 @@ for t = 1 : lengthSound
                 xlabel('$z$','interpreter', 'latex')
                 ylabel('$\alpha(v,z)$','interpreter', 'latex')
                 title('Adhesion map $\alpha(v,z)$', 'interpreter', 'latex', 'Fontsize', 16)
+                
                 %% Velocity of Mean Bristle Displacement
                 subplot(2,4,7)
                 plot(zDotSave(1:t))
@@ -478,51 +430,12 @@ for t = 1 : lengthSound
     end
     %     alphaSave(t) = alpha;
     % Save output
-    out1(t) = uNext(pickup1);
-    out2(t) = uNext(pickup2);
-    out3(t) = uNext(bP);
+    out(t) = uNext(pickup);
     %     out2(t) = u(pickup) + 1 / 2 * (uNext(pickup) - uPrev(pickup));
     
     % update state vectors
     uPrev = u;
     u = uNext;
 end
-startPos = 1;
-endPos = lengthSound;
-subplot(3,1,1)
-plot(startPos:endPos, out1(startPos:endPos));
-title("Output pos = 2/3 N")
-subplot(3,1,2)
-plot(startPos:endPos, out2(startPos:endPos));
-title("Output pos = 1/2 N")
-subplot(3,1,3)
-plot(startPos:endPos, out3(startPos:endPos));
-title("Output pos = bowing pos (1/4 N)")
 
-start = 1; endpoint = lengthSound;
-subplot(3,2,1); plot(start:endpoint, out1(start:endpoint))
-title("Output", 'interpreter', 'latex')
-subplot(3,2,2); plot(start:endpoint, zssSave(start:endpoint))
-title("$z_{ss}$", 'interpreter', 'latex')
-subplot(3,2,3); plot(start:endpoint, alphaSave(start:endpoint))
-title("$\alpha(v^n, z^n)$", 'interpreter', 'latex')
-subplot(3,2,4); plot(start:endpoint, zSave(start:endpoint))
-title("$z$", 'interpreter', 'latex')
-subplot(3,2,5); plot(start:endpoint, vRelSave(start:endpoint))
-title("$v_{rel}$", 'interpreter', 'latex')
-subplot(3,2,6);plot(start:endpoint, iSave(start:endpoint))
-title("Number of iterations", 'interpreter', 'latex')
-pause;
-start = 76000; endpoint = 80000;
-subplot(3,2,1); plot(start:endpoint, out1(start:endpoint))
-title("Output", 'interpreter', 'latex')
-subplot(3,2,2); plot(start:endpoint, zssSave(start:endpoint))
-title("$z_{ss}$", 'interpreter', 'latex')
-subplot(3,2,3); plot(start:endpoint, alphaSave(start:endpoint))
-title("$\alpha(v^n, z^n)$", 'interpreter', 'latex')
-subplot(3,2,4); plot(start:endpoint, zSave(start:endpoint))
-title("$z$", 'interpreter', 'latex')
-subplot(3,2,5); plot(start:endpoint, vRelSave(start:endpoint))
-title("$v_{rel}$", 'interpreter', 'latex')
-subplot(3,2,6);plot(start:endpoint, iSave(start:endpoint))
-title("Number of iterations", 'interpreter', 'latex')
+plot(out);

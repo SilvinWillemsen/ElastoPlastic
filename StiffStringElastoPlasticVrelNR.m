@@ -3,9 +3,9 @@ close all;
 clc;
 
 %% Drawing functions
-drawString = true;     % Choose between two different drawing options (can only be true for elastoPlastic bow model)
+drawString = false;     % Choose between two different drawing options (can only be true for elastoPlastic bow model)
 drawStart = 0;
-drawspeed = 100;
+drawspeed = 10;
 
 %% Choose bow model (elastoPlastic, simple, hyperbolic, cos (raised cosine)
 bowModel = "elastoPlastic";
@@ -17,7 +17,7 @@ f0 = 196.00;    % G3
 c = f0 * 2;     % Wave-Speed
 L = 1;          % String length
 k = 1/Fs;       % Time-step
-s0 = 1;       % Damping coefficients
+s0 = 0.1;       % Damping coefficients
 s1 = 0.005;
 
 E = 2e11;       % Young's modulus
@@ -46,7 +46,7 @@ if bowModel == "cos"
 end
 uPrev = u;
 
-lengthSound = Fs * 5; % Set the length of the output
+lengthSound = Fs * 2; % Set the length of the output
 out = zeros(lengthSound, 1);
 
 %% Initialise energy vectors
@@ -61,7 +61,7 @@ rOCdamp1StringEnergy = zeros(lengthSound, 1);
 rOCbowStringEnergy = zeros(lengthSound, 1);
 rOCenergy = zeros(lengthSound, 1);
 
-pickup = floor(N/3);    % Pickup position
+pickup = floor(2*N/3);    % Pickup position
             
 bp = 1/4;
 bP = floor(bp * N);
@@ -75,7 +75,7 @@ if bowModel == "elastoPlastic"
     mud=0.3;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
     strv=1e-1;             % "stribeck" velocity
 
-    FnInit = 0.5;
+    FnInit = 20;
     Fn = FnInit;
     fc=mud*Fn;             % coulomb force
     fs=mus*Fn;             % stiction force          
@@ -91,7 +91,7 @@ if bowModel == "elastoPlastic"
 
     z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!)
 
-    VbInit = 0.2;
+    VbInit = 0.1;
     zPrev = 0;
     z = 0;
     tol = 1e-7;
@@ -209,47 +209,35 @@ for t = 1 : lengthSound
                 
                 % Derivative of the steady state function (dz_ss/dv)
                 dz_ss = (-2*Vrel*sign(Vrel) / (strv^2*sig0))*(fs-fc)*espon;
-                
+                dz_ssAbs = sign(zss) * dz_ss;
                 dalpha_v=0; %d(alpha)/dv 
                 dalpha_z=0; %d(alpha)/dz
                 
                 zss = abs(zss); 
                 if ((sign(z)==sign(Vrel)) && (abs(z)>z_ba) && (abs(z)<zss) )
                     cosarg=cos(sign(z)*arg);
-                    dalpha_v=0.5*pi*cosarg*dz_ss*(z_ba-sign(z)*z)/(zss-z_ba)^2; 
+                    dalpha_v=0.5*pi*cosarg*dz_ssAbs*(z_ba-sign(z)*z)/(zss-z_ba)^2; 
                     dalpha_z=0.5*pi*cosarg*sign(z)/(zss-z_ba);
                 end
                 zss = zssPrev;
-
-%                 % functions to perform newton raphson on
-%                 g1 = (2/k + 2 * s0) * Vrel + (sig0 * z + sig1 * zdot + sig2 * Vrel + sig3 * w(t)) / (rho * A * h) + b;
-%                 g2 = Vrel * (1 - alpha * z / zss) - zdot; %a^n (discrete zdot)
-%                 
-%                 % derivatives of the functions
-%                 dg1v = 2/k + 2 * s0 + sig2 / (rho * A * h);
-%                 dg1z = sig0 / (rho * A * h) + 2 * sig1 / (k * rho * A * h);
-%                 dg2v = 1-z * ((alpha +Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
-%                 dg2z = -Vrel/zss*(z*dalpha_z +alpha) - 2 / k;
-%                 
-%                 % create Jacobian matrix
-%                 Jac = [dg1v, dg1z; dg2v, dg2z];
-%                 
-%                 % perform vector NR
-%                 solut = [Vrel; z] - Jac \ [g1; g2];
+                
+                dfnl_v = 1-z * ((alpha+Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
 
                 VrelPrev = Vrel;
                 g1 = (2/k + 2*s0 + sig2 / (rho*A*h)) * Vrel + (sig0 * z + sig1 * zdot + sig3 * w(t)) / (rho * A * h) + b;
-                dg1 = 2/k + 2*s0 + sig2 / (rho*A*h);
+                dg1 = 2/k + 2*s0 + sig2 / (rho*A*h) + sig1 * dfnl_v / (rho * A * h);
                 
                 Vrel = Vrel - g1 / dg1;
                 eps = abs(VrelPrev-Vrel);
                 
-                zdot = Vrel * (1 - alpha * z / zss);
+                z = (-(2/k + 2 * s0 + sig2 / (rho * A * h)) * Vrel - (sig1 * (2 / k * zPrev - zDotPrev) + sig3 * w(t)) / (rho * A * h) - b) / ((sig0 + 2/k * sig1) / (rho * A * h));
                 
-                %bilinear
-                z = k/2 * (zdot + zDotPrev) + zPrev;
-                %from g1 (should be the same as bilinear)
-                zTest = (- (2/k + 2*s0 + sig2 / (rho*A*h)) * Vrel - (sig1 * zdot + sig3 * w(t)) / (rho * A * h) - b) / (sig0 / (rho * A * h));
+                zdot = Vrel * (1 - alpha * z / zss);
+%                 z = k/2 * (zdot + zDotPrev) + zPrev;
+%                 %bilinear
+%                 
+%                 %from g1 (should be the same as bilinear)
+%                 zTest = (- (2/k + 2*s0 + sig2 / (rho*A*h)) * Vrel - (sig1 * zdot + sig3 * w(t)) / (rho * A * h) - b) / (sig0 / (rho * A * h));
                 
 %                 Vrel = solut(1);
 %                 z = solut(2);
@@ -259,13 +247,6 @@ for t = 1 : lengthSound
                 
                 
 %                 zdot = zdotNext;
-                
-                %what I used to do:
-%                 zdotNext = zdot - (fnl - zdot)/(d_fnl - 1);
-%                 z = zPrev + k / 2 * zDotPrev + k / 2 * zdot;
-%                 Vrel = ((-sig0 * z - sig1 * zdot - sig3(t) * w(t)) / scaleFact - b) / (sig2 / scaleFact + 2/k + 2*s0);
-%                 zTest(t,1) = (-sig1 * zdot - (sig2 + (rho * A) * (2/k + 2*s0)) * Vrel - sig3(t) * w(t) - (rho * A) * b) / sig0;
-%                 z - zTest(t)
                 i = i + 1;
                
             end
