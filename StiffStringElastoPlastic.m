@@ -3,7 +3,7 @@ close all;
 clc;
 
 %% Drawing functions
-drawString = true;
+drawString = false;
 drawStart = 20000;
 drawspeed = 100;
 drawEnergy = false;
@@ -145,7 +145,7 @@ zssVecPlotVal = 1;
 eVec = 2:N-1;
 vec = 3:N-2;
 saveAlphaItFlag = false;
-
+drawNR = false;
 for t = 1 : lengthSound
     
     %%% For debugging
@@ -224,7 +224,6 @@ for t = 1 : lengthSound
                 alphaSave(t) = alpha;
                 zss = zssPrev;
                 
-                anPrevIt = an;
                 an = 2/k * (z - zPrev) - anPrev;
                 
                 zdotPrevIt = zdot;
@@ -238,7 +237,7 @@ for t = 1 : lengthSound
                 vRelTemp = Vrel;
                 zTemp = z;
 
-                if t > 10000
+                if t > 10000 && drawNR
                     zDotMesh = vRelVec .* (1 - alpha * zVec' ./ zssVec);
                     g1Mesh = (2/k + 2 * s0) * vRelVec + (sig0 * zVec' + sig1 * zDotMesh ...
                         + sig2 * vRelVec + sig3 * w(t)) / (rho * A * h) + b;
@@ -255,7 +254,7 @@ for t = 1 : lengthSound
                     + sig2 * Vrel + sig3 * w(t)) / (rho * A * h) + b;
                 g2 = zdot - an; %a^n is discrete zdot using bilinear transform
                 
-                if t > 10000
+                if t > 10000 && drawNR
                     hold on;
                     scatter3(Vrel, z, g1);
                     scatter3(Vrel, z, g2);
@@ -291,10 +290,14 @@ for t = 1 : lengthSound
                 dg2z = dzdot_z - 2/k;
                 
                 % create Jacobian matrix
-                Jac = [dg1v, dg1z; dg2v, dg2z];
-                
+                Jac = [dg1v, dg1z; ...
+                       dg2v, dg2z];
+                determ = dg1v * dg2z - dg1z * dg2v;
+               
                 % perform vector NR
                 solut = [Vrel; z] - Jac \ [g1; g2];
+                VrelCheck = Vrel - 1/determ * (dg2z * g1 - dg1z * g2);
+                zCheck = z - 1/determ * (-dg2v * g1 + dg1v * g2);
                 VrelPrevIt = Vrel;
                 zPrevIt = z;
                 Vrel = solut(1);

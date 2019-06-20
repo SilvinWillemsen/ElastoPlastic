@@ -351,7 +351,7 @@ void MainComponent::drawData(bool createNew)
     }
     dataVisuals[0]->setData (data);
 //    dataVisuals[0]->setXData (xDataAlpha);
-    dataVisuals[0]->setDataPointX (violinStrings[0]->getVb());
+    dataVisuals[0]->setDataPointX (violinStrings[0]->getQ());
     
     std::vector<double> dataAlpha (detail, 0);
     std::vector<double> xDataAlpha (detail, 0);
