@@ -18,8 +18,8 @@ MainComponent::MainComponent() : minOut(-1.0), maxOut(1.0),
     // you add any child components.
     // specify the number of input and output channels that we want to open
     setAudioChannels (0, 2);
-    forceSlider.setRange (0.0, 100.0);
-    forceSlider.setValue (50.0);
+    forceSlider.setRange (0.0, 50.0);
+    forceSlider.setValue (10.0);
     addAndMakeVisible (forceSlider);
     forceSlider.addListener (this);
     
@@ -351,7 +351,7 @@ void MainComponent::drawData(bool createNew)
     }
     dataVisuals[0]->setData (data);
 //    dataVisuals[0]->setXData (xDataAlpha);
-    dataVisuals[0]->setDataPointX (violinStrings[0]->getQ());
+    dataVisuals[0]->setDataPointX (violinStrings[0]->getVb());
     
     std::vector<double> dataAlpha (detail, 0);
     std::vector<double> xDataAlpha (detail, 0);
