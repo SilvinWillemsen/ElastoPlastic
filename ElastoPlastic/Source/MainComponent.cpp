@@ -18,8 +18,8 @@ MainComponent::MainComponent() : minOut(-1.0), maxOut(1.0),
     // you add any child components.
     // specify the number of input and output channels that we want to open
     setAudioChannels (0, 2);
-    forceSlider.setRange (0.0, 100.0);
-    forceSlider.setValue (50.0);
+    forceSlider.setRange (0.0, 10.0);
+    forceSlider.setValue (1.0);
     addAndMakeVisible (forceSlider);
     forceSlider.addListener (this);
     
@@ -130,7 +130,7 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
         for (auto violinString : violinStrings)
         {
             violinString->bow();
-            output = output + violinString->getOutput(0.8) * (violinString->getModel() == exponential ? 800 : 3500);
+            output = output + violinString->getOutput(0.8) * (violinString->getModel() == exponential ? 800 : 800);
             violinString->updateUVectors();
         }
         channelData1[i] = clip(output);

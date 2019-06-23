@@ -79,13 +79,13 @@ if bowModel == "elastoPlastic"
     mud=0.3;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
     strv=1e-1;             % "stribeck" velocity
     
-    FnInit = 10;
+    FnInit = 1;
     Fn = FnInit;
     fc=mud*Fn;             % coulomb force
     fs=mus*Fn;             % stiction force
     
     sig0 = 1e4;           % bristle stiffness
-    sig1 = 0.1*sqrt(sig0);   % bristle damping
+    sig1 = 0.01*sqrt(sig0);   % bristle damping
     sig2 = 0.4;            % viscous friction term
     sig3 = 0;
     
@@ -205,7 +205,6 @@ for t = 1 : lengthSound
                     zss=fs/sig0;
                 end
                 zssSave(t) = zss;
-                
                 zssPrev = zss;
                 zss = abs(zss);
                 alpha = 0;
@@ -226,29 +225,29 @@ for t = 1 : lengthSound
                 
                 an = 2/k * (z - zPrev) - anPrev;
                 
-                zdotPrevIt = zdot;
+%                 zdotPrevIt = zdot;
                 
                 zdot = Vrel * (1 - alpha * z / zss);
-                if i > 1
-                    eps = abs(zdot - zdotPrevIt);
-                end
+%                 if i > 1
+%                     eps = abs(zdot - zdotPrevIt);
+%                 end
 %                 eps = sqrt(1/2 * ((Vrel - VrelPrevIt) / VrelPrevIt)^2 ...
 %                                     + ((z - zPrevIt) / zPrevIt)^2);
-                vRelTemp = Vrel;
-                zTemp = z;
-
-                if t > 10000 && drawNR
-                    zDotMesh = vRelVec .* (1 - alpha * zVec' ./ zssVec);
-                    g1Mesh = (2/k + 2 * s0) * vRelVec + (sig0 * zVec' + sig1 * zDotMesh ...
-                        + sig2 * vRelVec + sig3 * w(t)) / (rho * A * h) + b;
-                    g2Mesh = zDotMesh - 2/k * (zVec' - ones(length(zVec),1) * zPrev) - ones(length(zVec), 1) * anPrev;
-                    cla;
-%                     surf(vRelVec, zVec, g1Mesh)
-%                     hold on;
-%                     subplot(2,1,1)
-                    mesh(vRelVec, zVec, g1Mesh)
-                    mesh(vRelVec, zVec, g2Mesh)
-                end
+%                 vRelTemp = Vrel;
+%                 zTemp = z;
+% 
+%                 if t > 10000 && drawNR
+%                     zDotMesh = vRelVec .* (1 - alpha * zVec' ./ zssVec);
+%                     g1Mesh = (2/k + 2 * s0) * vRelVec + (sig0 * zVec' + sig1 * zDotMesh ...
+%                         + sig2 * vRelVec + sig3 * w(t)) / (rho * A * h) + b;
+%                     g2Mesh = zDotMesh - 2/k * (zVec' - ones(length(zVec),1) * zPrev) - ones(length(zVec), 1) * anPrev;
+%                     cla;
+% %                     surf(vRelVec, zVec, g1Mesh)
+% %                     hold on;
+% %                     subplot(2,1,1)
+%                     mesh(vRelVec, zVec, g1Mesh)
+%                     mesh(vRelVec, zVec, g2Mesh)
+%                 end
                 % functions to perform newton raphson on
                 g1 = (2/k + 2 * s0) * Vrel + (sig0 * z + sig1 * zdot ...
                     + sig2 * Vrel + sig3 * w(t)) / (rho * A * h) + b;
@@ -295,6 +294,7 @@ for t = 1 : lengthSound
                 determ = dg1v * dg2z - dg1z * dg2v;
                
                 % perform vector NR
+                prevSolut = [Vrel; z];
                 solut = [Vrel; z] - Jac \ [g1; g2];
                 VrelCheck = Vrel - 1/determ * (dg2z * g1 - dg1z * g2);
                 zCheck = z - 1/determ * (-dg2v * g1 + dg1v * g2);
@@ -303,6 +303,8 @@ for t = 1 : lengthSound
                 Vrel = solut(1);
                 z = solut(2);
                 
+                eps = norm(solut - prevSolut);
+%                 epsTest = 1/2 * ((Vrel - prevSolut(1)) / prevSolut(1) + (z - prevSolut(2)) / prevSolut(2));
                 if saveAlphaItFlag
                     alphaIt(i+1) = alpha;
                     vrelIt(i+1) = Vrel;
@@ -318,8 +320,39 @@ for t = 1 : lengthSound
                 i = i + 1;
                 
             end
-            vRel = vRelTemp;
-            z = zTemp;
+%             vRel = vRelTemp;
+%             z = zTemp;
+
+espon=exp(-(Vrel/strv).^2);         %exponential function
+                zss=sign(Vrel).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
+                if Vrel==0
+                    zss=fs/sig0;
+                end
+                zssSave(t) = zss;
+                
+                zssPrev = zss;
+                zss = abs(zss);
+                alpha = 0;
+                
+                % elasto-plastic function \alpha (v,z)
+                if (sign(z)==sign(Vrel))
+                    if ((abs(z)>z_ba) && (abs(z)<zss))
+                        arg=pi*(z-sign(z)*0.5*(zss+z_ba))/(zss-z_ba);
+                        sinarg=sin(sign(z)*arg);
+                        alpha=0.5*(1+sinarg);
+                    elseif (abs(z)>=zss)
+                        alpha=1;
+                    end
+                end
+                
+                alphaSave(t) = alpha;
+                zss = zssPrev;
+                
+                an = 2/k * (z - zPrev) - anPrev;
+                
+%                 zdotPrevIt = zdot;
+                
+                zdot = Vrel * (1 - alpha * z / zss);
             iSave(t) = i;
             
             if saveAlphaItFlag
@@ -356,7 +389,7 @@ for t = 1 : lengthSound
         zPrev = z;
         zDotPrev = zdot;
         anPrev = an;
-        
+
     elseif bowModel == "hyperbolic"
         v = 1/k * (I' * u - I' * uPrev);
         mu = (mud + (mus - mud) * Vb/2) / (Vb/2 + v - Vb);

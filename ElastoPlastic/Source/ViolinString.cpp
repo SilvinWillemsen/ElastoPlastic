@@ -78,13 +78,13 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     mud = 0.3; // dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
     strv = 0.1;      // "stribeck" velocity
     
-    Fn = 10;    // Normal force
+    Fn = 1;    // Normal force
     
     fC = mud * Fn; // coulomb force
     fS = mus * Fn; // stiction force
     
     sig0 = 10000;                   // bristle stiffness
-    sig1 = 0.1*sqrt(sig0);          // bristle damping
+    sig1 = 0.001*sqrt(sig0);          // bristle damping
     sig2 = 0.4;                     // viscous friction term
     sig3 = 0;                       // noise term
     oOstrvSq = 1 / (strv * strv);   // One over strv^2
@@ -147,6 +147,9 @@ void ViolinString::reset()
     q = 0;
     zPrev = 0;
     zDotPrev = 0;
+    anPrev = 0;
+    zPrevIt = 0;
+    qPrevIt = 0;
     z = 0;
     zDot = 0;
     std::cout << "RESET" << std::endl;
@@ -213,8 +216,8 @@ void ViolinString::resized()
 
 void ViolinString::bow()
 {
-//    double Fb = _Fb.load();
-    double Fb = 10;
+    double Fb = _Fb.load();
+//    double Fb = 10;
     bowPos.store(clamp(_bpX.load() * N, 2, N - 3));
     int bp = floor(bowPos.load());
     bool isBowing = _isBowing;
@@ -376,7 +379,7 @@ void ViolinString::newtonRaphson()
     else if (bowModel == elastoPlastic)
     {
         b = 2.0 / k * Vb - b1 * (uI - uIPrev) - gOh * (uI1 - 2 * uI + uIM1) + kOh * (uI2 - 4 * uI1 + 6 * uI - 4 * uIM1 + uIM2) + 2 * s0 * Vb - b2 * ((uI1 - 2 * uI + uIM1) - (uIPrev1 - 2 * uIPrev + uIPrevM1));
-        while (eps > tol && i < 200)
+        while (eps > tol && i < 200 && fC > 0)
         {
             espon = exp1 (-((q * q) * oOstrvSq));         //exponential function
             zss = sgn(q) * (fC + (fS - fC) * espon) * oOSig0;   //steady state curve: z_ss(v)
@@ -408,13 +411,13 @@ void ViolinString::newtonRaphson()
             zss = zssNotAbs;
             an = 2.0 / k * (z - zPrev) - anPrev;
             
-            zDotPrevIt = zDot;
+//            zDotPrevIt = zDot;
             
             // non-linear function estimate
             zDot = q * (1 - alpha * z * oOZss);
             
-            if (i > 1)
-                eps = abs(zDot - zDotPrevIt);
+//            if (i > 1)
+//                eps = abs(zDot - zDotPrevIt);
             
             vRelTemp = q;
             zTemp = z;
@@ -448,12 +451,16 @@ void ViolinString::newtonRaphson()
             dg2z = d_fnlz - 2.0 / k;
             
             determ = dg1v * dg2z - dg1z * dg2v;
-        
+            qPrevIt = q;
+            zPrevIt = z;
             q = q - 1 / determ * (dg2z * g1 - dg1z * g2);
             z = z - 1 / determ * (-dg2v * g1 + dg1v * g2);
             
+            eps = sqrt((q-qPrevIt)*(q-qPrevIt) + (z-zPrevIt)*(z-zPrevIt));
+            
             i = i + 1;
         }
+//        std::cout << i << std::endl;
         q = vRelTemp;
         z = zTemp;
 //        if (newMaxI)
@@ -497,7 +504,7 @@ Path ViolinString::generateStringPathAdvanced()
     
     for (int y = 1; y < N-1; y++)
     {
-        int visualScaling = (bowModel == elastoPlastic ? 500000 : 10000) * visualScale;
+        int visualScaling = (bowModel == elastoPlastic ? 100000 : 10000) * visualScale;
         float newY = uNext[y] * visualScaling + stringBounds;
         if (isnan(newY))
             newY = 0;
@@ -544,8 +551,8 @@ void ViolinString::mouseDown(const MouseEvent &e)
 //    std::cout << (bowModel == exponential ? "Exponential" : "Elasto-Plastic") << std::endl;
     if (ModifierKeys::getCurrentModifiers() == ModifierKeys::leftButtonModifier)
     {
-        _Vb = 0.1;
-        _Fb = 80;
+//        _Vb = 0.1;
+//        _Fb = 80;
         setBow(true);
     }
     if (e.y >= (getHeight() / 2.0) - cpMR && e.y <= (getHeight() / 2.0) + cpMR && ModifierKeys::getCurrentModifiers() == ModifierKeys::altModifier + ModifierKeys::leftButtonModifier)

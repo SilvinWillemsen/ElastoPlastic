@@ -124,10 +124,10 @@ public:
     void setNoise (double val) { sig3 = val; };
     
 private:
-    double fs, freq, c, L, r, csA, rho, k, kHalf, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
+    double fs, freq, c, L, r, csA, rho, k, kHalf, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, qPrevIt, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
     double velCalcDiv = 0; //Velocity calculation division
     //Elasto plastic vars
-    double z, zPrev, zDot, zDotNext, zDotPrev, zDotPrevIt, an, anPrev, scaleFact, fnl, z_ba, Fn, fC, fS, sig0, sig1, sig2, sig3, sig3w, oOSig0, E2, oOstrvSq, zss, zssNotAbs, oOZss, oOZssMinZba, dz_ss, dz_ssAbs, strv, espon, alpha, dalpha_v, dalpha_z, d_fnlv, d_fnlz, d_fnl, arg, mus, mud, K1, vRelTemp, zTemp, g1, g2, dg1v, dg1z, dg2v, dg2z, determ, invJac;
+    double z, zPrev, zPrevIt, zDot, zDotNext, zDotPrev, an, anPrev, scaleFact, fnl, z_ba, Fn, fC, fS, sig0, sig1, sig2, sig3, sig3w, oOSig0, E2, oOstrvSq, zss, zssNotAbs, oOZss, oOZssMinZba, dz_ss, dz_ssAbs, strv, espon, alpha, dalpha_v, dalpha_z, d_fnlv, d_fnlz, d_fnl, arg, mus, mud, K1, vRelTemp, zTemp, g1, g2, dg1v, dg1z, dg2v, dg2z, determ, invJac;
     double ff = 0.7;
     Random rand;
     atomic<double> lambdaSq;
@@ -138,7 +138,7 @@ private:
     vector<int> cx;
     vector<int> cy;
     vector<int> cpIdx;
-    atomic<bool> _isBowing{true};
+    atomic<bool> _isBowing{false};
     atomic<bool> _isPicking{false};
     
     double* uNext;
