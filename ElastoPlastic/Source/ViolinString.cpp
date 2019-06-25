@@ -27,13 +27,14 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     rho = 7850;
     r = 0.0005;
     csA = double_Pi * r * r;
-    
-    s0 = 0.1;     // Frequency-independent damping
+    Iner = double_Pi * r * r * r * r / 4.0;
+    Eyoung = 2e11;
+    s0 = 1;     // Frequency-independent damping
     s1 = 0.005; // Frequency-dependent damping
     
     //    B = 0.0001;                             // Inharmonicity coefficient
     //    kappa = sqrt (B) * (gamma / double_Pi); // Stiffness Factor
-    kappa = 1.261886162812672;
+    kappa = sqrt(Eyoung * Iner / (rho * csA));
     // Grid spacing
     //    if (stringType == bowedString && instrumentType == twoStringViolin)
     //    {
@@ -224,8 +225,7 @@ void ViolinString::bow()
     
     if (isBowing)
     {
-//        sig3w = (rand.nextFloat() * 2 - 1) * sig3;
-        sig3w = 0;
+        sig3w = (rand.nextFloat() * 2 - 1) * sig3;
         newtonRaphson();
     }
     //    if (pluck && pluckIdx < pluckLength)
@@ -379,7 +379,7 @@ void ViolinString::newtonRaphson()
     else if (bowModel == elastoPlastic)
     {
         b = 2.0 / k * Vb - b1 * (uI - uIPrev) - gOh * (uI1 - 2 * uI + uIM1) + kOh * (uI2 - 4 * uI1 + 6 * uI - 4 * uIM1 + uIM2) + 2 * s0 * Vb - b2 * ((uI1 - 2 * uI + uIM1) - (uIPrev1 - 2 * uIPrev + uIPrevM1));
-        while (eps > tol && i < 200 && fC > 0)
+        while (eps > tol && i < 50 && fC > 0)
         {
             espon = exp1 (-((q * q) * oOstrvSq));         //exponential function
             zss = sgn(q) * (fC + (fS - fC) * espon) * oOSig0;   //steady state curve: z_ss(v)

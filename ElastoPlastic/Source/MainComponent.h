@@ -79,7 +79,7 @@ private:
     
     int amountOfSensels = 1;
     
-    bool showData = false;
+    bool showData = true;
     bool showControls = true;
     int numStrings = 4;
     bool overrideNoise = false;

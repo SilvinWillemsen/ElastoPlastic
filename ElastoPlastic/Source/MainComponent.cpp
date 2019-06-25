@@ -74,14 +74,14 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     fs = sampleRate;
     bufferSize = samplesPerBlockExpected;
     
-//    for (int i = 0; i < numStrings; ++i)
-//    {
-//        violinStrings.add (new ViolinString (196.0 * pow (2, (7.0 * i) / 12.0), fs, 0, elastoPlastic));
+    for (int i = 0; i < numStrings; ++i)
+    {
+        violinStrings.add (new ViolinString (196.0 * pow (2, (7.0 * i) / 12.0), fs, 0, elastoPlastic));
 //        violinStrings.add (new ViolinString (196.0, fs, 0, elastoPlastic));
-//    }
+    }
 //    violinStrings.add (new ViolinString (196.0, fs, 0, elastoPlastic));
 //    violinStrings.add (new ViolinString (196.0, fs, 0, exponential));
-    violinStrings.add (new ViolinString (196.0, fs, 0, elastoPlastic));
+//    violinStrings.add (new ViolinString (196.0, fs, 0, elastoPlastic));
     
     if (showData)
         drawData(true);
@@ -201,8 +201,8 @@ void MainComponent::resized()
 
 void MainComponent::hiResTimerCallback()
 {
-    double maxVb = 0.5;
-    double maxFn = 100;
+    double maxVb = 0.3;
+    double maxFn = 10;
     for (auto sensel : sensels)
     {
         double finger0X = 0;
@@ -222,7 +222,7 @@ void MainComponent::hiResTimerCallback()
                 float x = sensel->fingers[f].x;
                 float y = sensel->fingers[f].y;
                 float Vb = sensel->fingers[f].delta_y * 0.2;
-                float Fn = sensel->fingers[f].force * 1000;
+                float Fn = sensel->fingers[f].force * 50;
 //                std::cout << "Vb = " << Vb << " Fn = " << Fn << std::endl;
                 int fingerID = sensel->fingers[f].fingerID;
                 

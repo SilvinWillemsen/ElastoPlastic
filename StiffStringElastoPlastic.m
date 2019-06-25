@@ -1,13 +1,13 @@
 clear all;
-close all;
+% close all;
 clc;
 
 %% Drawing functions
 drawString = false;
 drawStart = 20000;
-drawspeed = 100;
+drawspeed = 10;
 drawEnergy = false;
-hysteresis = false;
+hysteresis = true;
 
 %% Choose bow model (elastoPlastic, simple, hyperbolic, cos (raised cosine))
 bowModel = "elastoPlastic";
@@ -15,12 +15,12 @@ if bowModel ~= "elastoPlastic"
     drawString = false;
 end
 
-Fs = 44100;     % Sampling rate
-f0 = 196.00;    % G3
+Fs = 44100 * 5;     % Sampling rate
+f0 = 100.00;    % G3
 c = f0 * 2;     % Wave-Speed
 L = 1;          % String length
 k = 1/Fs;       % Time-step
-s0 = 0.1;       % Damping coefficients
+s0 = 1;       % Damping coefficients
 s1 = 0.005;
 
 E = 2e11;       % Young's modulus
@@ -87,7 +87,7 @@ if bowModel == "elastoPlastic"
     sig0 = 1e4;           % bristle stiffness
     sig1 = 0.01*sqrt(sig0);   % bristle damping
     sig2 = 0.4;            % viscous friction term
-    sig3 = 0;
+    sig3 = 0.0;
     
     w = (2 * rand(lengthSound,1) - 1);
     
@@ -160,7 +160,7 @@ for t = 1 : lengthSound
         epsSave = [];
     end
     %%%
-    
+%     Fn = t / lengthSound * FnInit;
     if bowModel == "elastoPlastic"
         fc=mud*Fn;             % coulomb force
         fs=mus*Fn;             % stiction force
@@ -168,7 +168,7 @@ for t = 1 : lengthSound
     end
 
     Vb = VbInit;
-    
+
     if bowModel == "simple"
         b = 2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev;
         eps = 1;
@@ -537,8 +537,8 @@ espon=exp(-(Vrel/strv).^2);         %exponential function
     uPrev = u;
     u = uNext;
 end
-startPos = 1;
-endPos = lengthSound;
+startPos = Fs / 4;
+endPos = Fs / 4 + Fs / 10;
 subplot(3,1,1)
 plot(startPos:endPos, out1(startPos:endPos));
 title("Output pos = 2/3 N")
@@ -549,17 +549,17 @@ subplot(3,1,3)
 plot(startPos:endPos, out3(startPos:endPos));
 title("Output pos = bowing pos (1/4 N)")
 
-figure;
-start = 1; endpoint = lengthSound;
-subplot(3,2,1); plot(start:endpoint, out1(start:endpoint))
-title("Output", 'interpreter', 'latex')
-subplot(3,2,2); plot(start:endpoint, zssSave(start:endpoint))
-title("$z_{ss}$", 'interpreter', 'latex')
-subplot(3,2,3); plot(start:endpoint, alphaSave(start:endpoint))
-title("$\alpha(v^n, z^n)$", 'interpreter', 'latex')
-subplot(3,2,4); plot(start:endpoint, zSave(start:endpoint))
-title("$z$", 'interpreter', 'latex')
-subplot(3,2,5); plot(start:endpoint, vRelSave(start:endpoint))
-title("$v_{rel}$", 'interpreter', 'latex')
-subplot(3,2,6);plot(start:endpoint, iSave(start:endpoint))
-title("Number of iterations", 'interpreter', 'latex')
+% figure;
+% start = 1; endpoint = lengthSound;
+% subplot(3,2,1); plot(start:endpoint, out1(start:endpoint))
+% title("Output", 'interpreter', 'latex')
+% subplot(3,2,2); plot(start:endpoint, zssSave(start:endpoint))
+% title("$z_{ss}$", 'interpreter', 'latex')
+% subplot(3,2,3); plot(start:endpoint, alphaSave(start:endpoint))
+% title("$\alpha(v^n, z^n)$", 'interpreter', 'latex')
+% subplot(3,2,4); plot(start:endpoint, zSave(start:endpoint))
+% title("$z$", 'interpreter', 'latex')
+% subplot(3,2,5); plot(start:endpoint, vRelSave(start:endpoint))
+% title("$v_{rel}$", 'interpreter', 'latex')
+% subplot(3,2,6);plot(start:endpoint, iSave(start:endpoint))
+% title("Number of iterations", 'interpreter', 'latex')
