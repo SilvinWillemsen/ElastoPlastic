@@ -68,6 +68,7 @@ public:
     void setBow(bool val) { _isBowing.store(val); };
     void setVb(double val) { _Vb = val; };
     double getVb() { return _Vb; };
+    double getQ() { return q; };
     void setFb(double val) { _Fb = val; };
     void setBowPos(double bpX, double bpY) { _bpX = bpX; _bpY = bpY; };
     void setFingerOn (bool val) { fingerOn = val; };
@@ -133,7 +134,7 @@ private:
     Random rand;
     atomic<double> lambdaSq;
     atomic<double> _Vb, _Fb, _bpX, _bpY;
-    
+    int limCount = 0;
     atomic<double> bowPos;
     double ogFreq; //original frequency
     vector<int> cx;
@@ -166,7 +167,7 @@ private:
     bool fingerOn = false;
     int fpx = 0;
     
-    StringInterpolType interpolation = cubic;
+    StringInterpolType interpolation = noStringInterpol;
     int cpMoveIdx = -1;
     int cpMR = 10; //connection point move range
     

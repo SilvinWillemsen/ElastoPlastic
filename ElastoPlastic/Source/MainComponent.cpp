@@ -130,7 +130,7 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
         for (auto violinString : violinStrings)
         {
             violinString->bow();
-            output = output + violinString->getOutput(0.8) * (violinString->getModel() == exponential ? 800 : 80000);
+            output = output + violinString->getOutput(0.8) * (violinString->getModel() == exponential ? 800 : 800);
             violinString->updateUVectors();
         }
         channelData1[i] = clip(output);
@@ -352,7 +352,7 @@ void MainComponent::drawData(bool createNew)
     }
     dataVisuals[0]->setData (data);
 //    dataVisuals[0]->setXData (xDataAlpha);
-    dataVisuals[0]->setDataPointX (violinStrings[0]->getVb());
+    dataVisuals[0]->setDataPointX (violinStrings[0]->getQ());
     
     std::vector<double> dataAlpha (detail, 0);
     std::vector<double> xDataAlpha (detail, 0);
