@@ -68,7 +68,6 @@ public:
     void setBow(bool val) { _isBowing.store(val); };
     void setVb(double val) { _Vb = val; };
     double getVb() { return _Vb; };
-    double getQ() { return q; };
     void setFb(double val) { _Fb = val; };
     void setBowPos(double bpX, double bpY) { _bpX = bpX; _bpY = bpY; };
     void setFingerOn (bool val) { fingerOn = val; };
@@ -123,6 +122,8 @@ public:
     
     void setNoise (double val) { sig3 = val; };
     
+    void calcZDot();
+    
 private:
     double fs, freq, c, L, Eyoung, Iner, r, csA, rho, k, kHalf, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, qPrevIt, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
     double velCalcDiv = 0; //Velocity calculation division
@@ -165,7 +166,7 @@ private:
     bool fingerOn = false;
     int fpx = 0;
     
-    StringInterpolType interpolation = noStringInterpol;
+    StringInterpolType interpolation = cubic;
     int cpMoveIdx = -1;
     int cpMR = 10; //connection point move range
     

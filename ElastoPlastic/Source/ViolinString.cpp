@@ -16,7 +16,7 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
 {
     uVecs.resize(3);
     
-    _bpX = 0.25;
+    _bpX = 0.5;
     _bpY = 0;
     
     c = ogFreq * 2; // Wave speed
@@ -29,11 +29,10 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     csA = double_Pi * r * r;
     Iner = double_Pi * r * r * r * r / 4.0;
     Eyoung = 2e11;
+    
     s0 = 1;     // Frequency-independent damping
     s1 = 0.005; // Frequency-dependent damping
-    
-    //    B = 0.0001;                             // Inharmonicity coefficient
-    //    kappa = sqrt (B) * (gamma / double_Pi); // Stiffness Factor
+
     kappa = sqrt(Eyoung * Iner / (rho * csA));
     // Grid spacing
     //    if (stringType == bowedString && instrumentType == twoStringViolin)
@@ -69,7 +68,7 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     a = 100; // Free parameter
     BM = sqrt(2 * a) * exp1(0.5);
     
-    _Vb = 0.1; // Bowing speed
+    _Vb = -0.1; // Bowing speed
     _Fb = 80;  // Bowing force / total mass of bow;
     
     // Elasto-Plastic bow model
@@ -77,7 +76,7 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     //// the Contact Force (be with you) //////
     mus = 0.8; // static friction coeff
     mud = 0.3; // dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
-    strv = 0.1;      // "stribeck" velocity
+    strv = 0.08;      // "stribeck" velocity
     
     Fn = 1;    // Normal force
     
@@ -87,17 +86,15 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     sig0 = 10000;                   // bristle stiffness
     sig1 = 0.001*sqrt(sig0);          // bristle damping
     sig2 = 0.4;                     // viscous friction term
-    sig3 = 0;                       // noise term
+    sig3 = 1;                       // noise term
     oOstrvSq = 1 / (strv * strv);   // One over strv^2
     z_ba = 0.7 * fC / sig0;         // break-away displacement (has to be < f_c/sigma_0!!)
     
     // Initialise variables for Newton Raphson
     tol = 1e-7;
-    qPrev = -_Vb;
+    qPrev = 0;
     zPrev = 0;
-    zDotPrev = _Vb;
-    an = _Vb;
-    anPrev = _Vb;
+    zDotPrev = 0;
     
     fp = 0;
     
@@ -123,10 +120,10 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     A5 *= D;
     
     E = k * k * (1 / h) * BM;
-    E2 = 1 / (h * (rho * csA / (k * k) + s0 / k));
+    E2 = k * k * (1 / h);
     
     reset();
-    q = -_Vb;
+    q = _Vb;
     scaleFact = 1; //rho * csA * h;
     K1 = -sig1 / (sig2 + scaleFact * (2 / k + 2 * s0));
     std:cout << N << std::endl;
@@ -218,7 +215,6 @@ void ViolinString::resized()
 void ViolinString::bow()
 {
     double Fb = _Fb.load();
-//    double Fb = 10;
     bowPos.store(clamp(_bpX.load() * N, 2, N - 3));
     int bp = floor(bowPos.load());
     bool isBowing = _isBowing;
@@ -381,46 +377,12 @@ void ViolinString::newtonRaphson()
         b = 2.0 / k * Vb - b1 * (uI - uIPrev) - gOh * (uI1 - 2 * uI + uIM1) + kOh * (uI2 - 4 * uI1 + 6 * uI - 4 * uIM1 + uIM2) + 2 * s0 * Vb - b2 * ((uI1 - 2 * uI + uIM1) - (uIPrev1 - 2 * uIPrev + uIPrevM1));
         while (eps > tol && i < 50 && fC > 0)
         {
-            espon = exp1 (-((q * q) * oOstrvSq));         //exponential function
-            zss = sgn(q) * (fC + (fS - fC) * espon) * oOSig0;   //steady state curve: z_ss(v)
-//            std::cout << zss << std::endl;
-            if (q==0)
-                zss = fS * oOSig0;
-            
-            // elasto-plastic function \alpha (v,z)
-            alpha=0;
-            
-            oOZss = 1 / zss;
-            zssNotAbs = zss;
-            zss = abs(zss);
-            
-            oOZssMinZba = 1 / (zss - z_ba); // should use the absolute zss
-            
-            if (sgn(z)==sgn(q))
-            {
-                if ((abs(z)>z_ba) && (abs(z)<zss))
-                {
-                    arg = double_Pi * (z - sgn(z) * 0.5 * (zss + z_ba)) * oOZssMinZba;
-                    alpha = 0.5 * (1 + sin(sgn(z) * arg));
-                }
-                else if (abs(z)>=zss)
-                {
-                    alpha=1;
-                }
-            }
-            zss = zssNotAbs;
-            an = 2.0 / k * (z - zPrev) - anPrev;
-            
-//            zDotPrevIt = zDot;
-            
-            // non-linear function estimate
-            zDot = q * (1 - alpha * z * oOZss);
-            
+            calcZDot();
 //            if (i > 1)
 //                eps = abs(zDot - zDotPrevIt);
             
-            vRelTemp = q;
-            zTemp = z;
+//            vRelTemp = q;
+//            zTemp = z;
             
             g1 = (2.0 / k + 2 * s0) * q + (sig0 * z + sig1 * zDot + sig2 * q + sig3w) / (rho * csA * h) + b;
             g2 = zDot - an;
@@ -428,22 +390,21 @@ void ViolinString::newtonRaphson()
             // compute derivatives
             
             // dz_ss/dv
-            dz_ss = (-2 * abs(q) * oOstrvSq * oOSig0) * (fS-fC) * espon;
-            dz_ssAbs = sgn(zss) * dz_ss;
+            dz_ss = (-2 * q * sgn(q) * oOstrvSq * oOSig0) * (fS-fC) * espon;
             
             dalpha_v = 0; //d(alpha)/dv
             dalpha_z = 0; //d(alpha)/dz
             zss = abs(zss);
-            if ((sgn(z)==sgn(q)) && (abs(z)>z_ba) && (abs(z)<zss) )
+            if ((sgn(z)==sgn(q)) && (abs(z)>z_ba) && (abs(z)<=zss) )
             {
-                double cosarg = cos(sgn(z) * arg);
-                dalpha_v = 0.5 * double_Pi * cosarg * dz_ssAbs * (z_ba - abs(z)) * oOZssMinZba * oOZssMinZba;
-                dalpha_z = 0.5 * double_Pi * cosarg * sgn(z) * oOZssMinZba;
+                double cosarg = cos(arg);
+                dalpha_v = 0.5 * double_Pi * cosarg * dz_ss * (z_ba - z) * oOZssMinZba * oOZssMinZba;
+                dalpha_z = 0.5 * double_Pi * cosarg * oOZssMinZba;
             }
             zss = zssNotAbs;
-            
-            d_fnlz = -q * oOZss * (z * dalpha_z + alpha);
             d_fnlv = 1 - z * ((alpha + q * dalpha_v) * zss - dz_ss * alpha * q) * oOZss * oOZss;
+            d_fnlz = -q * oOZss * (z * dalpha_z + alpha);
+            d_fnl = d_fnlv * K1 + d_fnlz * kHalf;
             
             dg1v = 2.0 / k + 2 * s0 + sig1 / (rho * csA * h) * d_fnlv + sig2 / (rho * csA * h);
             dg1z = sig0 / (rho * csA * h) + sig1 / (rho * csA * h) * d_fnlz;
@@ -457,12 +418,22 @@ void ViolinString::newtonRaphson()
             z = z - 1 / determ * (-dg2v * g1 + dg1v * g2);
             
             eps = sqrt((q-qPrevIt)*(q-qPrevIt) + (z-zPrevIt)*(z-zPrevIt));
-            
             i = i + 1;
+//            if (i >= maxI)
+//            {
+//                maxI = i;
+//                newMaxI = true;
+//            }
+            
+//            if (i == 49)
+//            {
+//                std::cout << "NR limit! " << limitCount << std::endl;
+//                ++limitCount;
+//            }
         }
-//        std::cout << i << std::endl;
-        q = vRelTemp;
-        z = zTemp;
+        calcZDot();
+//        q = vRelTemp;
+//        z = zTemp;
 //        if (newMaxI)
 //            std::cout << maxI << std::endl;
 //        if (i != 1 && i != 3)
@@ -470,8 +441,45 @@ void ViolinString::newtonRaphson()
         
         zPrev = z;
         zDotPrev = zDot;
-        anPrev = an;
     }
+}
+
+void ViolinString::calcZDot()
+{
+    espon = exp1 (-((q * q) * oOstrvSq));         //exponential function
+    zss = sgn(q) * (fC + (fS - fC) * espon) * oOSig0;   //steady state curve: z_ss(v)
+    //            std::cout << zss << std::endl;
+    if (q==0)
+        zss = fS * oOSig0;
+    
+    // elasto-plastic function \alpha (v,z)
+    alpha=0;
+    
+    oOZss = 1 / zss; // should use the absolute zss
+    zssNotAbs = zss;
+    zss = abs(zss);
+    
+    oOZssMinZba = 1 / (zss - z_ba); // should use the absolute zss
+    
+    if (sgn(z)==sgn(q))
+    {
+        if ((abs(z)>z_ba) && (abs(z)<=zss))
+        {
+            arg = double_Pi * (z - sgn(z) * 0.5 * (zss + z_ba)) * oOZssMinZba;
+            alpha = 0.5 * (1 + sin(sgn(z) * arg));
+        }
+        else if (abs(z)>zss)
+        {
+            alpha=1;
+        }
+    }
+    zss = zssNotAbs;
+    an = 2.0 / k * (z - zPrev) - anPrev;
+    
+    //            zDotPrevIt = zDot;
+    
+    // non-linear function estimate
+    zDot = q * (1 - alpha * z * oOZss);
 }
 
 void ViolinString::addJFc(double JFc, int index)
@@ -504,7 +512,7 @@ Path ViolinString::generateStringPathAdvanced()
     
     for (int y = 1; y < N-1; y++)
     {
-        int visualScaling = (bowModel == elastoPlastic ? 100000 : 10000) * visualScale;
+        int visualScaling = (bowModel == elastoPlastic ? 10000000 : 10000) * visualScale;
         float newY = uNext[y] * visualScaling + stringBounds;
         if (isnan(newY))
             newY = 0;
