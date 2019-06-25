@@ -221,8 +221,8 @@ void ViolinString::bow()
     
     if (isBowing)
     {
-        sig3w = (rand.nextFloat() * 2 - 1) * sig3;
-//        sig3w = 0;
+//        sig3w = (rand.nextFloat() * 2 - 1) * sig3;
+        sig3w = 0;
         newtonRaphson();
     }
     //    if (pluck && pluckIdx < pluckLength)
@@ -315,6 +315,8 @@ void ViolinString::newtonRaphson()
 {
     double Vb = _Vb.load();
     double Fb = _Fb.load();
+    Fn = 0.5;
+    Vb = 0.2;
     int bp = floor(bowPos.load());
     double alpha = bowPos.load() - bp;
     

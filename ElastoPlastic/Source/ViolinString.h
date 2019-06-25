@@ -114,7 +114,7 @@ public:
     
     BowModel getModel() { return bowModel; };
     
-    void setFn (double val) { Fn = val; fC = mud * Fn; fS = mus * Fn; };
+    void setFn (double val) { Fn = 0.5; fC = mud * Fn; fS = mus * Fn; };
     double getFC() { return fC; };
     double getFS() { return fS; };
     double getSig0() { return sig0; };
