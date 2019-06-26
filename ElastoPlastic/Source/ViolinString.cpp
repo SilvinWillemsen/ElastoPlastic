@@ -12,11 +12,11 @@
 #include "ViolinString.h"
 
 //==============================================================================
-ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowModel) : fs(fs), ogFreq(freq), stringID(stringID), bowModelInit (bowModel)
+ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowModelInit) : fs(fs), ogFreq(freq), stringID(stringID), bowModelInit (bowModelInit)
 {
     uVecs.resize(3);
-    
-    _bpX = 0.5;
+    bowModel = bowModelInit;
+    _bpX = 0.25;
     _bpY = 0;
     
     c = ogFreq * 2; // Wave speed
@@ -30,8 +30,10 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     Iner = double_Pi * r * r * r * r / 4.0;
     Eyoung = 2e11;
     
-    s0 = 1;     // Frequency-independent damping
-    s1 = 0.005; // Frequency-dependent damping
+    double T = c * c * rho * csA;
+    
+    s0 = 1 * rho * csA;     // Frequency-independent damping
+    s1 = 0.005 * rho * csA; // Frequency-dependent damping
 
     kappa = sqrt(Eyoung * Iner / (rho * csA));
     // Grid spacing
@@ -58,17 +60,17 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     uPrev = &uVecs[2][0];
     
     // Courant numbers
-    lambdaSq = pow(c * k / h, 2);
-    muSq = pow(k * kappa / (h * h), 2);
+    lambdaSq = c * c / (h * h);
+    muSq = kappa * kappa / (h * h * h * h);
     
-    kOh = (kappa * kappa) / (h * h);
+    kOh = (kappa * kappa) / (h * h * h * h);
     gOh = (c * c) / (h * h);
     
     // Simple (exponential) Bow Model
     a = 100; // Free parameter
     BM = sqrt(2 * a) * exp1(0.5);
     
-    _Vb = -0.1; // Bowing speed
+    _Vb = 0.1; // Bowing speed
     _Fb = 80;  // Bowing force / total mass of bow;
     
     // Elasto-Plastic bow model
@@ -99,18 +101,19 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     fp = 0;
     
     // FDS precalculations
-    B1 = s0 * k;
-    B2 = (2 * s1 * k) / (h * h);
+    B1 = s0 / k;
+    B2 = (2 * s1) / (k * h * h);
     
     b1 = 2.0 / (k * k);
     b2 = (2 * s1) / (k * h * h);
     
-    D = 1.0 / (1.0 + s0 * k);
+    D = 1.0 / (rho * csA / (k * k) + s0 / k);
     
-    A1 = 2 - 2 * lambdaSq - 6 * muSq - 2 * B2;
-    A2 = lambdaSq + 4 * muSq + B2;
-    A3 = muSq;
-    A4 = B1 - 1 + 2 * B2;
+    A1 = 2 * rho * csA / (k * k) - 2 * T / (h * h) - 6 * Eyoung * Iner / (h * h * h * h) - 2 * B2;
+//    A1 = (2 - 2 * lambdaSq - 6 * muSq - 2 * B2) * (rho * csA / (k * k)) / (rho * csA / (k * k) + s0 / k);
+    A2 = T / (h * h) + 4 * Eyoung * Iner / (h * h * h * h) + B2;
+    A3 = Eyoung * Iner / (h * h * h * h);
+    A4 = B1 - (rho * csA) / (k * k) + 2 * B2;
     A5 = B2;
     
     A1 *= D;
@@ -123,7 +126,7 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     E2 = 1.0 / (h * (rho * csA / (k * k) + s0 / k));
     
     reset();
-    q = _Vb;
+    q = 0;
     scaleFact = 1; //rho * csA * h;
     K1 = -sig1 / (sig2 + scaleFact * (2 / k + 2 * s0));
     std:cout << N << std::endl;
@@ -214,6 +217,12 @@ void ViolinString::resized()
 
 void ViolinString::bow()
 {
+//    std::vector<double> uSave (N, 0);
+//    for (int l = 0; l < N; ++l)
+//    {
+//        uSave[l] = u[l];
+//    }
+    
     double Fb = _Fb.load();
     bowPos.store(clamp(_bpX.load() * N, 2, N - 3));
     int bp = floor(bowPos.load());
@@ -234,17 +243,17 @@ void ViolinString::bow()
     {
         excitation = E * Fb * q * exp1(-a * q * q);
     }
-    else if (bowModel == elastoPlastic)
+    else if (bowModel == elastoPlastic && isBowing)
     {
         excitation = E2 * (sig0 * z + sig1 * zDot + sig2 * q + sig3w); //* (rho * csA);
+    } else {
+        excitation = 0;
     }
     
     for (int l = 2; l < N - 2; ++l)
     {
         uNext[l] = A1 * u[l] + A2 * (u[l + 1] + u[l - 1]) - A3 * (u[l + 2] + u[l - 2]) + A4 * uPrev[l] - A5 * (uPrev[l + 1] + uPrev[l - 1]);
-//        uNext[l] = A1 * u[l] + A2 * (u[l + 1] + u[l - 1]) - A3 * (u[l + 2] + u[l - 2]) + A4 * uPrev[l] - A5 * (uPrev[l + 1] + uPrev[l - 1]);
     }
-    
     
     if (simplySupported)
     {
@@ -253,7 +262,6 @@ void ViolinString::bow()
         l = N - 2;
         uNext[l] = (A1 + muSq) * u[l] + A2 * (u[l + 1] + u[l - 1]) - A3 * (u[l - 2]) + A4 * uPrev[l] - A5 * (uPrev[l + 1] + uPrev[l - 1]);
     }
-    
     if (isBowing)
     {
         double alpha = bowPos - floor(bowPos);
@@ -282,7 +290,7 @@ void ViolinString::bow()
                 uNext[bp + 2] = uNext[bp + 2] - excitation * (alpha * (alpha + 1) * (alpha - 1)) * oneOverSix;
         }
     }
-    
+   
     if (ff > 1)
     {
         ff = 1;
@@ -313,10 +321,9 @@ void ViolinString::bow()
 
 void ViolinString::newtonRaphson()
 {
+//    double Vb = _Vb.load();
     double Vb = _Vb.load();
     double Fb = _Fb.load();
-    Fn = 0.5;
-    Vb = 0.2;
     int bp = floor(bowPos.load());
     double alpha = bowPos.load() - bp;
     
@@ -378,14 +385,10 @@ void ViolinString::newtonRaphson()
     else if (bowModel == elastoPlastic)
     {
         b = 2.0 / k * Vb - b1 * (uI - uIPrev) - gOh * (uI1 - 2 * uI + uIM1) + kOh * (uI2 - 4 * uI1 + 6 * uI - 4 * uIM1 + uIM2) + 2 * s0 * Vb - b2 * ((uI1 - 2 * uI + uIM1) - (uIPrev1 - 2 * uIPrev + uIPrevM1));
-        while (eps > tol && i < 50 && fC > 0)
+        // b
+        while (eps > tol && i < 200 && fC > 0)
         {
             calcZDot();
-//            if (i > 1)
-//                eps = abs(zDot - zDotPrevIt);
-            
-//            vRelTemp = q;
-//            zTemp = z;
             
             g1 = (2.0 / k + 2 * s0) * q + (sig0 * z + sig1 * zDot + sig2 * q + sig3w) / (rho * csA * h) + b;
             g2 = zDot - an;
@@ -393,7 +396,6 @@ void ViolinString::newtonRaphson()
             // compute derivatives
             
             // dz_ss/dv
-//            dz_ss = (-2 * q * sgn(q) * oOstrvSq * oOSig0) * (fS-fC) * espon;
             dz_ss = (-2 * abs(q) * oOstrvSq * oOSig0) * (fS-fC) * espon;
             dz_ssAbs = sgn(zss) * dz_ss;
             
@@ -419,36 +421,19 @@ void ViolinString::newtonRaphson()
             determ = dg1v * dg2z - dg1z * dg2v;
             qPrevIt = q;
             zPrevIt = z;
-            q = q - 1 / determ * (dg2z * g1 - dg1z * g2);
-            z = z - 1 / determ * (-dg2v * g1 + dg1v * g2);
+            q = q - (1 / determ) * (dg2z * g1 - dg1z * g2);
+            z = z - (1 / determ) * (-dg2v * g1 + dg1v * g2);
             
             eps = sqrt((q-qPrevIt)*(q-qPrevIt) + (z-zPrevIt)*(z-zPrevIt));
             i = i + 1;
-//            if (i >= maxI)
-//            {
-//                maxI = i;
-//                newMaxI = true;
-//            }
-            
-//            if (i == 49)
-//            {
-//                std::cout << "NR limit! " << limitCount << std::endl;
-//                ++limitCount;
-//            }
         }
-        if (i == 50)
+        if (i == 200)
         {
-            ++limCount;
-            std::cout << Fn << " Limit! " << limCount <<  std::endl;
+            ++limitCount;
+            std::cout << Fn << " Limit! " << limitCount <<  std::endl;
         }
         
         calcZDot();
-//        q = vRelTemp;
-//        z = zTemp;
-//        if (newMaxI)
-//            std::cout << maxI << std::endl;
-//        if (i != 1 && i != 3)
-//        std::cout << "i = " << i << std::endl;
         
         zPrev = z;
         zDotPrev = zDot;
@@ -507,10 +492,12 @@ double ViolinString::getOutput(double ratio)
 
 void ViolinString::updateUVectors()
 {
+    
     uPrev = u;
     u = uNext;
-    uNext = &uVecs[uNextPtrIdx][0];
+    
     uNextPtrIdx = (uNextPtrIdx + 1) % 3;
+    uNext = &uVecs[uNextPtrIdx][0];
 }
 
 Path ViolinString::generateStringPathAdvanced()

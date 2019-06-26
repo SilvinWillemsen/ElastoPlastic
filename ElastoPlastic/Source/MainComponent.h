@@ -79,8 +79,8 @@ private:
     
     int amountOfSensels = 1;
     
-    bool showData = true;
-    bool showControls = true;
+    bool showData = false;
+    bool showControls = false;
     int numStrings = 1;
     bool overrideNoise = false;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)

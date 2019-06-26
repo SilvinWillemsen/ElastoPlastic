@@ -114,7 +114,12 @@ public:
     
     BowModel getModel() { return bowModel; };
     
-    void setFn (double val) { Fn = 0.5; fC = mud * Fn; fS = mus * Fn; };
+    void setFn (double val) {
+        Fn = clamp(val, 0.75, 100);
+//        Fn = val;
+        fC = mud * Fn;
+        fS = mus * Fn;
+    };
     double getFC() { return fC; };
     double getFS() { return fS; };
     double getSig0() { return sig0; };
@@ -134,7 +139,7 @@ private:
     Random rand;
     atomic<double> lambdaSq;
     atomic<double> _Vb, _Fb, _bpX, _bpY;
-    int limCount = 0;
+    
     atomic<double> bowPos;
     double ogFreq; //original frequency
     vector<int> cx;
@@ -182,7 +187,7 @@ private:
     long limitCount = 0;
     int maxI = 0;
     
-    bool simplySupported = true;
+    bool simplySupported = false;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ViolinString)
 };
 

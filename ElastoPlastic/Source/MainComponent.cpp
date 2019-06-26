@@ -130,13 +130,14 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
         for (auto violinString : violinStrings)
         {
             violinString->bow();
-            output = output + violinString->getOutput(0.8) * (violinString->getModel() == exponential ? 800 : 800);
+            output = output + violinString->getOutput(0.25) * (violinString->getModel() == exponential ? 800 : 800); // comment everything after "getOutput(..)" out when debugging on a sample-by-sample basis (vs. matlab)
             violinString->updateUVectors();
         }
         channelData1[i] = clip(output);
         channelData2[i] = clip(output);
+//        std::cout <<"Buffer sample " << i << ": " <<  output << std::endl;
     }
-//    std::cout << channelData1[10] << std::endl;
+    
 }
 
 void MainComponent::releaseResources()
@@ -361,7 +362,7 @@ void MainComponent::drawData(bool createNew)
     int j = 0;
     for (int i = 0; i < detail; ++i)
     {
-        double zVec = (i - detail * 0.5) / (detail * 100.0);
+        double zVec = (i - detail * 0.5) / (detail * 1000.0);
         xDataAlpha[i] = zVec;
         if ((abs(zVec)>z_ba) && (abs(zVec)<zssPlot))
         {
