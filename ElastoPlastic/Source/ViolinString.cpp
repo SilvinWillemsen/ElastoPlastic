@@ -132,7 +132,7 @@ ViolinString::ViolinString (double freq, double fs, int stringID, BowModel bowMo
     
     velCalcDiv =  1 / (sig2 + scaleFact * (2/k + 2 * s0));
     oOSig0 = 1 / sig0;
-    _isBowing =  true;
+//    _isBowing =  true;
     std::cout << N << std::endl;
 }
 
@@ -165,10 +165,8 @@ void ViolinString::paint(Graphics &g)
      You should replace everything in this method with your own
      drawing code..
      */
-    bowModel = bowModelInit;
     g.setColour(bowModel == elastoPlastic ? Colours::cyan : Colours::limegreen);
     g.strokePath(generateStringPathAdvanced(), PathStrokeType(2.0f));
-
     g.setColour(Colours::orange);
     for (int c = 0; c < cpIdx.size(); ++c)
     {
@@ -180,7 +178,7 @@ void ViolinString::paint(Graphics &g)
     
     // draw bow
     Colour c = Colours::yellow;
-    float alph = static_cast<float>((Fn + 20) / 80.0);
+    float alph = clamp (static_cast<float>((Fn + 2) / 8.0), 0.2, 1.0);
 //    std::cout << alph << std::endl;
     g.setColour (c.withAlpha (alph));
 //    double opa = 90.0 / 100.0;
@@ -214,11 +212,11 @@ void ViolinString::resized()
 
 void ViolinString::bow()
 {
-    std::vector<double> uSave (N, 0);
-    for (int l = 0; l < N; ++l)
-    {
-        uSave[l] = u[l];
-    }
+//    std::vector<double> uSave (N, 0);
+//    for (int l = 0; l < N; ++l)
+//    {
+//        uSave[l] = u[l];
+//    }
     
     double Fb = _Fb.load();
     bowPos.store(clamp(_bpX.load() * N, 2, N - 3));
@@ -227,8 +225,8 @@ void ViolinString::bow()
     
     if (isBowing)
     {
-//        sig3w = (rand.nextFloat() * 2 - 1) * sig3;
-        sig3w = 0;
+        sig3w = (rand.nextFloat() * 2 - 1) * sig3;
+//        sig3w = 0;
         newtonRaphson();
     }
     //    if (pluck && pluckIdx < pluckLength)
@@ -430,7 +428,7 @@ void ViolinString::newtonRaphson()
             ++limitCount;
             std::cout << Fn << " Limit! " << limitCount <<  std::endl;
         }
-        
+//        std::cout << i << std::endl;
         calcZDot();
         
         zPrev = z;
@@ -501,7 +499,7 @@ Path ViolinString::generateStringPathAdvanced()
     Path stringPath;
     stringPath.startNewSubPath(0, stringBounds);
     
-    auto spacing = getWidth() / static_cast<double>(N);
+    auto spacing = getWidth() / static_cast<double>(N - 1);
     auto x = spacing;
     
     for (int y = 1; y < N-1; y++)
@@ -526,7 +524,6 @@ Path ViolinString::generateStringPathAdvanced()
         x += spacing;
     }
     stringPath.lineTo(getWidth(), stringBounds);
-    
     return stringPath;
 }
 

@@ -130,7 +130,7 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
         for (auto violinString : violinStrings)
         {
             violinString->bow();
-            output = output + violinString->getOutput(0.25) * (violinString->getModel() == exponential ? 800 : 800); // comment everything after "getOutput(..)" out when debugging on a sample-by-sample basis (vs. matlab)
+            output = output + violinString->getOutput(0.8) * (violinString->getModel() == exponential ? 800 : 800); // comment everything after "getOutput(0.25)" out when debugging on a sample-by-sample basis (vs. matlab)
             violinString->updateUVectors();
         }
         channelData1[i] = clip(output);
@@ -242,7 +242,7 @@ void MainComponent::hiResTimerCallback()
                         Fn = clip (Fn, 0, maxFn);
                         if (!overrideNoise)
                         {
-                            violinStrings[i]->setNoise (Fn * 0.05);
+                            violinStrings[i]->setNoise (Fn * 0.02);
                         }
 //                        if (abs(Vb) == maxVb)
 //                        std::cout << Vb <<std::endl;
