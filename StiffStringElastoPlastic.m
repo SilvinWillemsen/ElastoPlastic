@@ -69,10 +69,16 @@ rOCenergy = zeros(lengthSound, 1);
 pickup1 = floor(2*N/3);    % Pickup position
 pickup2 = floor(N/2);
 
-bp = 1/4;
+bp = 33.5/95;
 bP = floor(bp * N);
 I = zeros(N,1);
-I(floor(bp * N)) = 1;
+alph = bp * N - bP;
+interPolVec = [(alph * (alph - 1) * (alph - 2)) / -6.0;
+               ((alph - 1) * (alph + 1) * (alph - 2)) / 2.0;
+               (alph * (alph + 1) * (alph - 2)) / -2.0;
+               (alph * (alph + 1) * (alph - 1)) / 6.0];
+
+I(bP-1:bP+2) = interPolVec;
 J = 1/h * I;
 
 if bowModel == "elastoPlastic"
@@ -214,7 +220,8 @@ for t = 1 : lengthSound
             i = 0;
             VrelPrevIt = tol;
             zPrevIt = tol;
-            while eps>tol && i < 200
+            z_ba=0.7*fc/sig0;
+            while eps>tol && i < 50
                 espon=exp(-(Vrel/strv).^2);         %exponential function
                 zss=sign(Vrel).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
                 if Vrel==0
@@ -554,9 +561,9 @@ for t = 1 : lengthSound
     out1(t) = uNext(pickup1);
     out2(t) = uNext(pickup2);
     out3(t) = uNext(bP);
-    if t == 2
-        
-    end
+%     if t == 512
+%         
+%     end
     % update state vectors
     uPrev = u;
     u = uNext;

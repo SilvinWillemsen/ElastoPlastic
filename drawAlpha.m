@@ -5,7 +5,7 @@ mus=0.4;               % static friction coeff
 mud=0.2;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
 strv=0.1;             % "stribeck" velocity
 
-plotzss = true;
+plotzss = false;
 
 Fn = 5;
 
@@ -18,7 +18,7 @@ sig1=.1*sqrt(sig0);   % bristle damping
 sig2=0.4;            % viscous friction term 
 sigma=[sig0,sig1,sig2];
 
-z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
+z_ba=0.5*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
 
 
 if plotzss
@@ -51,8 +51,8 @@ zss = abs(zss);
 for i = 1:3001
 %     if (sign(z(i))==sign(Vrel(i)))
         if ((abs(z(i))>z_ba) && (abs(z(i))<zss(i)))
-            arg=pi*(z(i) - 0.5*(zss(i)+z_ba))/(zss(i)-z_ba);
-            sinarg(i)=sin(arg);
+            arg=pi*(z(i)-sign(z(i))*0.5*(zss(i)+z_ba))/(zss(i)-z_ba);
+            sinarg(i)=sin(sign(z(i)) * arg);
             alphaVar(i)=0.5*(1+sinarg(i));
         elseif (abs(z(i))>zss(i))
             alphaVar(i)=1;
@@ -73,7 +73,7 @@ zss = zssPrev;
 %     end
 % end
 
-figure('Renderer', 'painters', 'Position', [100 100 600 420])
+figure('Renderer', 'painters', 'Position', [100 100 600 300])
 hold on;
 ylim([-0.07 1.07])
 xlim([-1.5e-4 1.5e-4])
@@ -90,18 +90,18 @@ for i = 1:length(locations)
         plot([locations(i) locations(i)], [min(ylim) max(ylim)], 'Linewidth', 2, 'color', [0.6 0.6 0.6]);
     end
 end
-for i = 0:0.1:1
+for i = 0:0.2:1
     plot([min(xlim) max(xlim)], [i i], 'Linewidth', 2, 'color', [0.6 0.6 0.6]);
 end
 fontsize = 16;
 xNames = {'-$z_{ss}(v)$', '-$z_{ba}$', '$0$', '$z_{ba}$', '$z_{ss}(v)$'};
-text(locations, repmat(-0.11, 5, 1), xNames, 'horizontalAlignment', 'center', 'Fontsize', 18, 'interpreter', 'latex')
-text(0, 0.85, '$|z|\leq z_{ba}$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center')
-text((z_ba+zss(1)) / 2, 0.85, '$z_{ba}<|z|<|z_{ss}(v)|$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center', 'rotation', -90)
-text((zss(1) + 1.5e-4) / 2, 0.85, '$|z|\geq|z_{ss}(v)|$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center')
+text(locations, repmat(-0.12, 5, 1), xNames, 'horizontalAlignment', 'center', 'Fontsize', 18, 'interpreter', 'latex')
+% text(0, 0.85, '$|z|\leq z_{ba}$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center')
+% text((z_ba+zss(1)) / 2, 0.85, '$z_{ba}<|z|<|z_{ss}(v)|$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center', 'rotation', -90)
+% text((zss(1) + 1.5e-4) / 2, 0.85, '$|z|\geq|z_{ss}(v)|$', 'interpreter', 'latex', 'Fontsize', fontsize, 'horizontalAlignment', 'center')
 
 set(gca, 'Fontsize', 15, 'TickLabelInterpreter', 'latex')
-text(0, -0.15, '$z$','interpreter', 'latex', 'Fontsize', 20, 'horizontalAlignment', 'center')
+text(0, -0.175, '$z$','interpreter', 'latex', 'Fontsize', 20, 'horizontalAlignment', 'center')
 title('Plot for $\alpha(v,z)$ if sgn($v$) == sgn($z$)','interpreter', 'latex', 'Fontsize', 20)
 ylabel('$\alpha(v,z)$','interpreter', 'latex')
 plot(z, alphaVar, 'k', 'Linewidth', 2);
@@ -109,7 +109,7 @@ xticks([])
 %%DRAW VERTICAL GRIDLINES
 % scatter([-z_ba; z_ba; -zss(1); zss(1)], [0; 0; 1; 1], 50, 'circle')
 
-set(gca, 'Position', [0.08 0.09 0.91 0.84])
+set(gca, 'Position', [0.08 0.115 0.91 0.80])
 
 patch([min(xlim) max(xlim) max(xlim) min(xlim)], [max(ylim) max(ylim) min(ylim) min(ylim)], [0 0 0], 'FaceColor', 'none', 'EdgeColor', 'black', 'LineWidth', 2);
 % grid on;

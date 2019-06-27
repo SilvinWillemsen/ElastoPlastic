@@ -19,7 +19,6 @@ MainComponent::MainComponent() : minOut(-1.0), maxOut(1.0),
     // specify the number of input and output channels that we want to open
     setAudioChannels (0, 2);
     forceSlider.setRange (0.0, 10.0);
-    forceSlider.setValue (1.0);
     addAndMakeVisible (forceSlider);
     forceSlider.addListener (this);
     
@@ -85,6 +84,7 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     
     if (showData)
         drawData(true);
+    forceSlider.setValue (violinStrings[0]->getFn());
     
     setSize (appWidth, appHeight);
     
@@ -137,7 +137,7 @@ void MainComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFil
         channelData2[i] = clip(output);
 //        std::cout <<"Buffer sample " << i << ": " <<  output << std::endl;
     }
-    
+//    std::cout << violinStrings[0]->getzBA() << std::endl;
 }
 
 void MainComponent::releaseResources()

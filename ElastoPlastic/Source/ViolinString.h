@@ -115,15 +115,17 @@ public:
     BowModel getModel() { return bowModel; };
     
     void setFn (double val) {
-        Fn = clamp(val, 0.75, 100);
-//        Fn = val;
+//        Fn = clamp(val, 0, 10);
+        Fn = val;
         fC = mud * Fn;
         fS = mus * Fn;
     };
+    double getFn() { return Fn; };
     double getFC() { return fC; };
     double getFS() { return fS; };
     double getSig0() { return sig0; };
     double getZ() { return z; };
+    double getzBA() { return z_ba; };
     void scaleVisuals (double val) { visualScale = val; };
     
     void setNoise (double val) { sig3 = val; };
@@ -131,7 +133,7 @@ public:
     void calcZDot();
     
 private:
-    double fs, freq, c, L, Eyoung, Iner, r, csA, rho, k, kHalf, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, qPrevIt, b, eps, fp, B1, B2, b1, b2, A1, A2, A3, A4, A5, D, E;
+    double fs, freq, c, L, Eyoung, Iner, r, csA, rho, k, kHalf, s0, s1, B, kappa, h, N, muSq, kOh, gOh, a, BM, tol, q, qPrev, qPrevIt, b, eps, fp, B1, B2, b1, b2, A1, A1ss, A2, A3, A4, A5, D, E;
     double velCalcDiv = 0; //Velocity calculation division
     //Elasto plastic vars
     double z, zPrev, zPrevIt, zDot, zDotNext, zDotPrev, an, anPrev, scaleFact, fnl, z_ba, Fn, fC, fS, sig0, sig1, sig2, sig3, sig3w, oOSig0, E2, oOstrvSq, zss, zssNotAbs, oOZss, oOZssMinZba, dz_ss, dz_ssAbs, strv, espon, alpha, dalpha_v, dalpha_z, d_fnlv, d_fnlz, d_fnl, arg, mus, mud, K1, vRelTemp, zTemp, g1, g2, dg1v, dg1z, dg2v, dg2z, determ, invJac;
@@ -187,7 +189,7 @@ private:
     long limitCount = 0;
     int maxI = 0;
     
-    bool simplySupported = false;
+    bool simplySupported = true;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ViolinString)
 };
 
