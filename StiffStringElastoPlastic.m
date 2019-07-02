@@ -5,16 +5,16 @@ clc;
 Fs = 44100;     % Sampling rate
 
 %% Drawing functions
-drawString = false;
+drawString = true;
 drawStart = 0;
-drawspeed = 1000;
-drawEnergy = false;
+drawspeed = 100;
+drawEnergy = true;
 hysteresis = false;
 
 %% Choose bow model (elastoPlastic, simple, hyperbolic, cos (raised cosine))
 bowModel = "elastoPlastic";
 if bowModel ~= "elastoPlastic"
-    drawString = false;
+%     drawString = false;
 end
 
 
@@ -22,7 +22,7 @@ f0 = 196.00;    % G3
 c = f0 * 2;     % Wave-Speed
 L = 1;          % String length
 k = 1/Fs;       % Time-step
-s0 = 1;       % Damping coefficients
+s0 = 0.0;       % Damping coefficients
 s1 = 0.005;
 
 E = 2e11;       % Young's modulus
@@ -63,20 +63,25 @@ rOCkinEnergy = zeros(lengthSound, 1);
 rOCpotEnergy = zeros(lengthSound, 1);
 rOCdamp0StringEnergy = zeros(lengthSound, 1);
 rOCdamp1StringEnergy = zeros(lengthSound, 1);
+rOCbowEnergyInput = zeros(lengthSound, 1);
+rOCbristleEnergy = zeros(lengthSound, 1);
+
+rOCbowEnergy = zeros(lengthSound, 1);
+rOCdispEnergy = zeros(lengthSound,1);
 rOCbowStringEnergy = zeros(lengthSound, 1);
 rOCenergy = zeros(lengthSound, 1);
 
 pickup1 = floor(2*N/3);    % Pickup position
 pickup2 = floor(N/2);
 
-bp = 33.5/95;
+bp = 33/N;
 bP = floor(bp * N);
 I = zeros(N,1);
 alph = bp * N - bP;
 interPolVec = [(alph * (alph - 1) * (alph - 2)) / -6.0;
-               ((alph - 1) * (alph + 1) * (alph - 2)) / 2.0;
-               (alph * (alph + 1) * (alph - 2)) / -2.0;
-               (alph * (alph + 1) * (alph - 1)) / 6.0];
+    ((alph - 1) * (alph + 1) * (alph - 2)) / 2.0;
+    (alph * (alph + 1) * (alph - 2)) / -2.0;
+    (alph * (alph + 1) * (alph - 1)) / 6.0];
 
 I(bP-1:bP+2) = interPolVec;
 J = 1/h * I;
@@ -93,12 +98,10 @@ if bowModel == "elastoPlastic"
     fs=mus*Fn;             % stiction force
     
     sig0 = 1e4;           % bristle stiffness
-    sig1 = 0.001*sqrt(sig0);   % bristle damping
+    %     sig1 = 0.001*sqrt(sig0);   % bristle dampin
     sig2 = 0.4;            % viscous friction term
     sig3 = 0.0;
     w = (2 * rand(lengthSound,1) - 1);
-    
-    sigma=[sig0,sig1,sig2];
     
     z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!)
     
@@ -107,22 +110,22 @@ if bowModel == "elastoPlastic"
     z = 0;
     tol = 1e-7;
     
-%     zdot = VbInit;
-%     zDotPrev = VbInit;
-%     an = zdot;
-%     anPrev = zDotPrev;
+    zdot = VbInit;
+    zDotPrev = VbInit;
+    an = zdot;
+    anPrev = zDotPrev;
     
-    zdot = 0;
-    zDotPrev = 0;
-    an = 0;
-    anPrev = 0;
-    
-%     Vrel = -VbInit;
-%     VrelPrev = -VbInit;
-%     VbPrev = VbInit;
-    Vrel = 0;
-    VrelPrev = 0;
-    VbPrev = 0;
+%     zdot = 0;
+%     zDotPrev = 0;
+%     an = 0;
+%     anPrev = 0;
+%     
+    Vrel = -VbInit;
+    VrelPrev = -VbInit;
+    VbPrev = VbInit;
+    %     Vrel = 0;
+    %     VrelPrev = 0;
+    %     VbPrev = 0;
     
     % for drawing
     zVec = -z_ba*5:z_ba/10:z_ba*5;
@@ -134,7 +137,8 @@ if bowModel == "elastoPlastic"
             zssVec(ii)=fs/sig0;
         end
     end
-    
+%         sig1 = 4 * sig0 * zssVec(end) / (vRelVec(end) * 1);
+    sig1 = 0;
     zSave = zeros(lengthSound, 1);
     vRelSave = zeros(lengthSound, 1);
     zDotSave = zeros(lengthSound, 1);
@@ -163,6 +167,8 @@ saveAlphaItFlag = false;
 drawNR = false;
 ramp = lengthSound / 2;
 figure('Renderer', 'painters', 'Position', [100 100 800 350])
+
+sig1coeff = 3;
 for t = 1 : lengthSound
     
     %%% For debugging
@@ -177,20 +183,20 @@ for t = 1 : lengthSound
         epsSave = [];
     end
     %%%
-%     if t < ramp
-%         Fn = t / ramp * (FnInit - 0.01) + 0.01;
-%     else
-        Fn = FnInit;
-%     end
-% FnSave(t) = Fn;
+    %     if t < ramp
+    %         Fn = t / ramp * (FnInit - 0.01) + 0.01;
+    %     else
+    
+    %     end
+    % FnSave(t) = Fn;
     if bowModel == "elastoPlastic"
+        Fn = FnInit;
         fc=mud*Fn;             % coulomb force
         fs=mus*Fn;             % stiction force
         z_ba=0.7*fc/sig0;      % break-away displacement (has to be < f_c/sigma_0!!)
+        Vb = VbInit;
     end
-    
-    Vb = VbInit;
-    
+
     if bowModel == "simple"
         b = 2/k * Vb + 2 * s0 * Vb + I' * bB * u + I' * bC * uPrev;
         eps = 1;
@@ -251,26 +257,9 @@ for t = 1 : lengthSound
                 %                 zdotPrevIt = zdot;
                 
                 zdot = Vrel * (1 - alpha * z / zss);
-                %                 if i > 1
-                %                     eps = abs(zdot - zdotPrevIt);
-                %                 end
-                %                 eps = sqrt(1/2 * ((Vrel - VrelPrevIt) / VrelPrevIt)^2 ...
-                %                                     + ((z - zPrevIt) / zPrevIt)^2);
-                %                 vRelTemp = Vrel;
-                %                 zTemp = z;
-                %
-                %                 if t > 10000 && drawNR
-                %                     zDotMesh = vRelVec .* (1 - alpha * zVec' ./ zssVec);
-                %                     g1Mesh = (2/k + 2 * s0) * vRelVec + (sig0 * zVec' + sig1 * zDotMesh ...
-                %                         + sig2 * vRelVec + sig3 * w(t)) / (rho * A * h) + b;
-                %                     g2Mesh = zDotMesh - 2/k * (zVec' - ones(length(zVec),1) * zPrev) - ones(length(zVec), 1) * anPrev;
-                %                     cla;
-                % %                     surf(vRelVec, zVec, g1Mesh)
-                % %                     hold on;
-                % %                     subplot(2,1,1)
-                %                     mesh(vRelVec, zVec, g1Mesh)
-                %                     mesh(vRelVec, zVec, g2Mesh)
-                %                 end
+                
+                %                 sig1 = sig1coeff * sig0 * zss * alpha / Vrel;
+                
                 % functions to perform newton raphson on
                 g1 = (2/k + 2 * s0) * Vrel + (sig0 * z + sig1 * zdot ...
                     + sig2 * Vrel + sig3 * w(t)) / (rho * A * h) + b;
@@ -305,8 +294,11 @@ for t = 1 : lengthSound
                 dzdot_z = -Vrel/zss*(z*dalpha_z + alpha);
                 dzdot_v = 1-z * ((alpha+Vrel*dalpha_v)*zss -dz_ss*alpha*Vrel)/zss^2;
                 
+                %                 dsig1 = 4 * sig0 * (dz_ss * Vrel - zss) / Vrel^2;
+                %                 dsig1 = sig1coeff * sig0 * ((dz_ss * alpha * Vrel + zss * (dalpha_v * Vrel - alpha)) / Vrel^2);
                 % derivatives of the functions
-                dg1v = 2/k + 2 * s0 + sig1 / (rho * A * h) * dzdot_v + sig2 / (rho * A * h);
+                %                 dg1v = 2/k + 2 * s0 + (dsig1 * zdot + sig1 * dzdot_v) / (rho * A * h) + sig2 / (rho * A * h);
+                dg1v = 2/k + 2 * s0 + sig1 / (rho * A * h) + sig2 / (rho * A * h);
                 dg1z = sig0 / (rho * A * h) + sig1 / (rho * A * h) * dzdot_z;
                 dg2v = dzdot_v;
                 dg2z = dzdot_z - 2/k;
@@ -377,7 +369,7 @@ for t = 1 : lengthSound
             
             zdot = Vrel * (1 - alpha * z / zss);
             iSave(t) = i;
-            
+            %             sig1 = sig1coeff * sig0 * zss * alpha / Vrel;
             if saveAlphaItFlag
                 subplot(5, 1, 1);
                 plot(alphaIt);
@@ -397,6 +389,10 @@ for t = 1 : lengthSound
                 drawnow;
             end
             
+            %             if sig1 * Vrel * alpha / (4 * zss) > sig0
+            %                     disp("Not stable")
+            %             end
+            %             sig1Save(t) = sig1;
             F = (sig0 * z + sig1 * zdot + sig2 * Vrel + sig3 * w(t));
             Fsave(t) = F;
         else
@@ -422,10 +418,12 @@ for t = 1 : lengthSound
     end
     
     %% Update FDS
-    uNext = (B * u + C * uPrev);
-    
-    uNext = uNext - excitation / (rho * A / k^2 + s0 / k);
-%     uNext(23)
+    uNext = B * u + C * uPrev - excitation / (rho * A / k^2 + s0 / k);
+    if bowModel ~= "cos"
+        vrelDiff(t) = Vrel - ((uNext(bP) - uPrev(bP)) / (2*k) - Vb);
+        bristleEnergy(t) = sig0 / 2 * z^2;
+    end
+%     Vrel = ((uNext(bP) - uPrev(bP)) / (2*k) - Vb);
     %% Calculate energy of the string
     kinEnergy(t) = rho * A / 2 * h * sum((1/k * (u - uPrev)).^2);
     potEnergy(t) = T / 2 * 1/h * sum((u(3:N) - u(2:N-1)) .* (uPrev(3:N) - uPrev(2:N-1)))...
@@ -440,8 +438,19 @@ for t = 1 : lengthSound
         - h * E * Iner / (2 * k * h^4) * sum((u(vec+2) - 4 * u(vec+1) + 6 * u(vec) - 4 * u(vec-1) + u(vec-2)) .* (uNext(vec) - uPrev(vec)));%...
     rOCdamp0StringEnergy(t) = -2 * s0 * h / (4 * k^2) * sum((uNext - uPrev).*(uNext - uPrev));
     rOCdamp1StringEnergy(t) = 2 * h * s1 / (2 * k^2 * h^2) * sum((u(eVec+1) - 2 * u(eVec) + u(eVec-1) - uPrev(eVec+1) + 2 * uPrev(eVec) - uPrev(eVec-1)) .* (uNext(eVec) - uPrev(eVec)));
-    rOCbowStringEnergy(t) = -h * sum(I .* excitation) * (uNext(bP) - uPrev(bP)) / (2 * k);
-    rOCenergy(t) = rOCkinEnergy(t) - rOCpotEnergy(t) - rOCdamp0StringEnergy(t) - rOCdamp1StringEnergy(t) - rOCbowStringEnergy(t);
+%     rOCtotBowEnergy(t) = -F * (uNext(bP) - uPrev(bP)) / (2*k);
+%     rOCenergy(t) = rOCkinEnergy(t) - rOCpotEnergy(t) - rOCdamp0StringEnergy(t) - rOCdamp1StringEnergy(t) - rOCtotBowEnergy(t);
+    if bowModel ~= "cos"
+        rOCbowEnergyInput(t) = F * Vb;
+        rOCbristleEnergy(t) = sig0 * z * zdot;
+        rOCdispEnergy(t) = sig1 * (zdot + 1/2 * Vrel * alpha * z / zss)^2 + z^2 * Vrel * alpha / zss * (sig0 - sig1 * Vrel * alpha /(4*zss)) + sig2 * Vrel^2;
+    end
+    if bowModel == "elastoPlastic"
+        rOCenergy(t) = rOCkinEnergy(t) - rOCpotEnergy(t) - rOCdamp0StringEnergy(t) - rOCdamp1StringEnergy(t) + rOCbowEnergyInput(t) + rOCbristleEnergy(t) + rOCdispEnergy(t) + rOCbowEnergy(t);
+    else
+        rOCenergy(t) = rOCkinEnergy(t) - rOCpotEnergy(t) - rOCdamp0StringEnergy(t) - rOCdamp1StringEnergy(t);
+    end
+%         rOCenergy(t) = rOCkinEnergy(t) - rOCpotEnergy(t) - rOCdamp0StringEnergy(t) - rOCdamp1StringEnergy(t) - rOCbowStringEnergy(t);
     
     %% Drawing functions
     if drawString == true && mod(t,drawspeed) == 0 && t >= drawStart
@@ -543,16 +552,31 @@ for t = 1 : lengthSound
             drawnow;
             
         elseif drawEnergy == true && t > drawStart - 1000 && mod(t, drawspeed) == 0
-            subplot(3,1,1);
+            subplot(4,1,1);
             plot(u);
             title("String (state)")
-            subplot(3,1,2);
-            plot(totEnergy(10:t) / totEnergy(10) - 1);
-            title("Total energy")
-            subplot(3,1,3);
+            subplot(4,1,2);
+            %             plot(totEnergy(10:t) / totEnergy(10) - 1);
+            %             title("Total energy")
+            cla;
+            if bowModel == "cos"
+                plot(totEnergy(10:t)/totEnergy(10) - 1)
+            else
+                plot(rOCkinEnergy(10:t) - rOCpotEnergy(10:t) - rOCdamp0StringEnergy(10:t) - rOCdamp1StringEnergy(10:t));
+                hold on;
+                plot(rOCdispEnergy(10:t));
+                plot(rOCbowEnergyInput(10:t));
+                plot(rOCdispEnergy(10:t));
+                plot(rOCbristleEnergy(10:t));
+            end
+            subplot(4,1,3);
             cla
             plot(rOCenergy(10:t));
             title("Rate of change of energy + bowing energy (should be 0)");
+            if bowModel ~= "cos"
+                subplot(4,1,4)
+                plot(-vrelDiff(10:t));
+            end
             drawnow;
         end
     end
@@ -561,9 +585,9 @@ for t = 1 : lengthSound
     out1(t) = uNext(pickup1);
     out2(t) = uNext(pickup2);
     out3(t) = uNext(bP);
-%     if t == 512
-%         
-%     end
+    %     if t == 512
+    %
+    %     end
     % update state vectors
     uPrev = u;
     u = uNext;

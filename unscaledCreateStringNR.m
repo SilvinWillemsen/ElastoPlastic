@@ -22,13 +22,14 @@ function [B, C, N, h, Dxx, Dxxxx, s0, s1, bB, bC] = unscaledCreateStringNR(rho, 
             sparse(1:N-1, 2:N, ones(1, N-1), N, N));
 %     Dxxxx = Dxx*Dxx;
 %     N = N - 2;
-    B = (2 * rho * A / k^2 * eye(N) + T / h^2 * Dxx - E * I / h^4 * Dxxxx + 2 * s1 / (k * h^2) * Dxx) / (rho * A / k^2 + s0 / k);
-    C = ((-rho * A / k^2 + s0 / k) * eye(N) - 2 * s1 / (k*h^2) * Dxx) / (rho * A / k^2 + s0 / k);
+    phi = (2 * s1)/(k * h^2);
+    B = ((2 * rho * A / k^2) * eye(N) + T / h^2 * Dxx - E * I / h^4 * Dxxxx + phi * Dxx) / (rho * A / k^2 + s0 / k);
+    C = ((-rho * A / k^2 + s0 / k) * eye(N) - phi * Dxx) / (rho * A / k^2 + s0 / k);
     
     kOh = (kappa/h^2)^2;
     gOh = (c/h)^2;
 
-    phi = (2 * s1)/(k * h^2);
+    
     bB = sparse(-2/k^2 * eye(N) - gOh * Dxx + kOh * Dxxxx - phi * Dxx);
     bC = sparse(2/k^2 * eye(N) + phi * Dxx);
     bCTest = sparse(2:N, 1:N-1, phi * ones(1, N-1), N, N) + ...
