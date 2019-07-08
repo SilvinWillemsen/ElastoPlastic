@@ -46,6 +46,7 @@ public:
     void buttonClicked (Button* button) override;
 
     int sgn (double val) { return (0 < val) - (val < 0); };
+    void drawData (bool createNew = false);
     
 private:
     //==============================================================================
