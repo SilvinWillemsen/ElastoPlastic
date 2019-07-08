@@ -47,7 +47,6 @@ public:
 
     int sgn (double val) { return (0 < val) - (val < 0); };
     
-    void drawData (bool createNew = false);
 private:
     //==============================================================================
     // Your private member variables go here...
@@ -83,5 +82,6 @@ private:
     bool showControls = true;
     int numStrings = 1;
     bool overrideNoise = false;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
