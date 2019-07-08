@@ -57,6 +57,31 @@ private:
     float maxOut;
     
     OwnedArray<ViolinString> violinStrings;
-   
+    OwnedArray<Sensel> sensels;
+    OwnedArray<DataVisual> dataVisuals;
+    unsigned long stateUpdateCounter = 0;
+    
+    int appWidth = 1440;
+    int appHeight = 800;
+    int controlsWidth = 100;
+
+    Slider forceSlider;
+    Slider scaleGraphics;
+    Slider noiseFactor;
+    
+    ToggleButton toggleGraphics;
+    ToggleButton overrideNoiseButton;
+    Label forceLabel;
+    Label scaleLabel;
+    Label noiseLabel;
+    bool initGraphics = true;
+    
+    int amountOfSensels = 1;
+    
+    bool showData = false;
+    bool showControls = true;
+    int numStrings = 1;
+    bool overrideNoise = false;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
