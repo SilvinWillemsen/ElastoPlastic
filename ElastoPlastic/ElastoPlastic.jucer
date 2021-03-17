@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="DrqUSn" name="ElastoPlastic" projectType="guiapp" jucerVersion="5.4.1">
+<JUCERPROJECT id="DrqUSn" name="ElastoPlastic" projectType="guiapp" displaySplashScreen="1"
+              jucerFormatVersion="1">
   <MAINGROUP id="NRLeSw" name="ElastoPlastic">
     <GROUP id="{A00824A9-B907-E249-9DEB-A58B2D8DA539}" name="SenselWrapper">
       <GROUP id="{3DD958D7-5366-55AC-F668-E5A9AA6F71D3}" name="lib">

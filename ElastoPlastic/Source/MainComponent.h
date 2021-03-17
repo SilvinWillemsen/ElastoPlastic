@@ -82,7 +82,7 @@ private:
     bool showData = false;
     bool showControls = true;
     int numStrings = 1;
-    bool overrideNoise = false;
+    bool overrideNoise = true;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

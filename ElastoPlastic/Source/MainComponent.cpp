@@ -28,7 +28,7 @@ MainComponent::MainComponent() : minOut(-1.0), maxOut(1.0),
     scaleGraphics.addListener (this);
     
     noiseFactor.setRange (0.0, 5.0);
-    noiseFactor.setValue (1.0);
+    noiseFactor.setValue (0.01);
     addAndMakeVisible (noiseFactor);
     noiseFactor.addListener (this);
     
