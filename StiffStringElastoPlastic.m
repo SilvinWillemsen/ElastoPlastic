@@ -8,8 +8,8 @@ Fs = 44100;     % Sampling rate
 drawString = true;
 drawStart = 0;
 drawspeed = 100;
-drawEnergy = true;
-hysteresis = false;
+drawEnergy = false;
+hysteresis = true;
 
 %% Choose bow model (elastoPlastic, simple, hyperbolic, cos (raised cosine))
 bowModel = "elastoPlastic";
@@ -545,8 +545,8 @@ for t = 1 : lengthSound
                 title('Force function $f(v,z)$ against relative velocity', 'interpreter', 'latex', 'Fontsize', 16)
                 set(gca, 'Fontsize', 20)
                 set(gca, 'Position', [0.11 0.15 0.86 0.77])
-                xlim([-0.42 0.05])
-                ylim([-2 -1.65])
+%                 xlim([-0.42 0.05])
+%                 ylim([-2 -1.65])
                 grid on;
             end
             drawnow;

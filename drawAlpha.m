@@ -1,16 +1,16 @@
 clear all;
 close all;
 %%%% the Contact Force (be with you) %%%%%%%%%
-mus=0.4;               % static friction coeff
-mud=0.2;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
+mus=0.8;               % static friction coeff
+mud=0.3;              % dynamic friction coeff (must be < mus!!) %EDIT: and bigger than 0
 strv=0.1;             % "stribeck" velocity
 
 plotzss = false;
 
-Fn = 5;
+Fn = 1;
 
 fc=mud*Fn;             % coulomb force
-fs=mus*Fn;             % stiction force
+fs=mus*Fn;             % stiction force`
 ssparam=[fc,fs,strv];            
 
 sig0=1e4;           % bristle stiffness
@@ -18,19 +18,21 @@ sig1=.1*sqrt(sig0);   % bristle damping
 sig2=0.4;            % viscous friction term 
 sigma=[sig0,sig1,sig2];
 
-z_ba=0.5*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
-
+z_ba=0.7*fc/sig0;    % break-away displacement (has to be < f_c/sigma_0!!) 
 
 if plotzss
     Vrel = -1:0.001:1;
 else
-    Vrel = [0.2 * ones(3001,1)];
+    Vrel = -[0.0022 * ones(3001,1)];
 end
 espon=exp(-(Vrel/strv).^2);         %exponential function
 zss=sign(Vrel).*(fc +(fs-fc)*espon)/sig0;   %steady state curve: z_ss(v)
 if Vrel==0
   zss=fs/sig0;
 end
+
+z = linspace(-2*abs(zss(1)), 2*abs(zss(1)), length(Vrel));
+
 
 if plotzss
     figure('Renderer', 'painters', 'Position', [100 100 600 250])
@@ -43,12 +45,10 @@ if plotzss
     set(gca, 'Fontsize', 16);
     return;
 end
-
-z = -0.00015:0.0000001:0.00015;
-alphaVar=zeros(3001,1);
+alphaVar=zeros(length(z),1);
 zssPrev = zss;
 zss = abs(zss);
-for i = 1:3001
+for i = 1:length(z)
 %     if (sign(z(i))==sign(Vrel(i)))
         if ((abs(z(i))>z_ba) && (abs(z(i))<zss(i)))
             arg=pi*(z(i)-sign(z(i))*0.5*(zss(i)+z_ba))/(zss(i)-z_ba);
